@@ -1,0 +1,93 @@
+# One-command stack:  docker compose up --build          (core services; first start trains the models)
+#                     docker compose --profile demo up --build   (+ live simulator at 200 TPS)
+x-app: &app
+  build: { context: ., dockerfile: docker/Dockerfile.app }
+  image: dpi-fraud-engine:latest
+  env_file: [.env]
+  environment:
+    REDIS_URL: redis://redis:6379/0
+    DATABASE_URL: postgresql://${POSTGRES_USER:-fraud}:${POSTGRES_PASSWORD:-fraud}@postgres:5432/${POSTGRES_DB:-fraud}
+    DATA_DIR: /app/data
+    ARTIFACTS_DIR: /app/models/artifacts
+  volumes:
+    - fraud-data:/app/data
+    - fraud-models:/app/models/artifacts
+  restart: unless-stopped
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "noeviction"]
+    ports: ["6379:6379"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 3s, retries: 20 }
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fraud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fraud}
+      POSTGRES_DB: ${POSTGRES_DB:-fraud}
+    ports: ["5432:5432"]
+    volumes: [pg-data:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fraud}"], interval: 5s, timeout: 3s, retries: 20 }
+
+  # one-shot: generate data, replay features, train + register + promote, bootstrap online state
+  init:
+    <<: *app
+    restart: "no"
+    command: ["sh", "-c", "python scripts/tasks.py prepare --n-tx ${DEMO_N_TX:-1000000} && python scripts/tasks.py bootstrap"]
+    depends_on:
+      redis: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+
+  api:
+    <<: *app
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports: ["8000:8000"]
+    depends_on: { init: { condition: service_completed_successfully } }
+    healthcheck: { test: ["CMD", "curl", "-fs", "http://localhost:8000/healthz"], interval: 10s, timeout: 5s, retries: 10 }
+
+  worker-0:
+    <<: *app
+    command: ["python", "-m", "pipeline.worker", "--partition", "0"]
+    depends_on: { init: { condition: service_completed_successfully } }
+
+  worker-1:
+    <<: *app
+    command: ["python", "-m", "pipeline.worker", "--partition", "1"]
+    depends_on: { init: { condition: service_completed_successfully } }
+
+  persister:
+    <<: *app
+    command: ["python", "-m", "pipeline.persister"]
+    depends_on: { init: { condition: service_completed_successfully } }
+
+  graph-worker:
+    <<: *app
+    command: ["python", "-m", "graph.worker"]
+    depends_on: { init: { condition: service_completed_successfully } }
+
+  retrainer:
+    <<: *app
+    command: ["python", "-m", "models.retrain", "--schedule"]
+    depends_on: { init: { condition: service_completed_successfully } }
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dashboard
+      args: { VITE_API_KEY: "${VITE_API_KEY}" }
+    ports: ["8080:80"]
+    depends_on: [api]
+
+  simulator:
+    <<: *app
+    profiles: ["demo"]
+    restart: "no"
+    command: ["python", "-m", "simulator.simulator", "--tps", "${SIM_TPS:-200}", "--loop"]
+    depends_on: { api: { condition: service_healthy } }
+
+volumes:
+  fraud-data:
+  fraud-models:
+  pg-data:

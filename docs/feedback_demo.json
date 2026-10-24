@@ -1,0 +1,75 @@
+{
+ "started": "2026-10-18T21:47:29",
+ "model_before": "v1",
+ "replay": {
+  "sent": 121009,
+  "seconds": 121.0,
+  "achieved_tps": 1000.0,
+  "duplicates": 0,
+  "reordered": 0
+ },
+ "live_window": {
+  "scored_transfers": 120921,
+  "alerts_reviewed": 1192,
+  "missed_frauds_in_window": 46,
+  "missed_frauds_reported": 26,
+  "feedback_by_kind": {
+   "true_positive": 441,
+   "false_positive": 751,
+   "false_negative": 26
+  }
+ },
+ "retrain": {
+  "run_id": 1,
+  "base_version": "v1",
+  "candidate_version": "v2",
+  "promoted": true,
+  "reason": "pr_auc 0.8162 -> 0.8652, recall@1%FPR 0.9108 -> 0.9292 within tolerance 0.01",
+  "n_feedback": 1218,
+  "holdout_days": [
+   53,
+   60
+  ],
+  "before": {
+   "model": "v1",
+   "pr_auc_observed": 0.8162,
+   "pr_auc_truth": 0.896,
+   "roc_auc": 0.9976,
+   "recall_at_1pct_fpr": 0.9627,
+   "review_precision": 0.2089,
+   "review_recall": 0.9503,
+   "block_precision": 0.584,
+   "block_recall": 0.8851,
+   "drift_variant_recall_review": 0.9324,
+   "per_fraud_type_recall_review": {
+    "identity_spoofing": 0.9098,
+    "transaction_laundering": 0.9638,
+    "settlement_manipulation": 1.0
+   }
+  },
+  "after": {
+   "model": "v2",
+   "pr_auc_observed": 0.8652,
+   "pr_auc_truth": 0.9441,
+   "roc_auc": 0.9982,
+   "recall_at_1pct_fpr": 0.9783,
+   "review_precision": 0.4058,
+   "review_recall": 0.9565,
+   "block_precision": 0.8862,
+   "block_recall": 0.8944,
+   "drift_variant_recall_review": 0.9459,
+   "per_fraud_type_recall_review": {
+    "identity_spoofing": 0.9262,
+    "transaction_laundering": 0.9638,
+    "settlement_manipulation": 1.0
+   }
+  }
+ },
+ "model_after": "v2",
+ "workers_model_after": [
+  "v2",
+  "v2",
+  "v2",
+  "v2"
+ ]
+}

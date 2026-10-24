@@ -1,0 +1,91 @@
+{
+ "machine": {
+  "platform": "Windows-10-10.0.26300-SP0",
+  "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "python": "3.11.15",
+  "partitions": 4
+ },
+ "started": "2026-10-18T22:37:34",
+ "phases": [
+  {
+   "phase": "stream @ 200 TPS x 120s",
+   "target_tps": 200,
+   "duration_s": 120,
+   "sent_events": 24014,
+   "achieved_publish_tps": 200.0,
+   "processed_events": 24014,
+   "processing_tps": 192.6,
+   "drain_after_publish_s": 2.0,
+   "errors": 0,
+   "error_rate": 0.0,
+   "scoring_latency_ms": {
+    "n": 23999,
+    "p50": 3.57,
+    "p95": 5.31,
+    "p99": 10.96,
+    "max": 995.95,
+    "mean": 3.93
+   },
+   "e2e_latency_ms": {
+    "n": 23999,
+    "p50": 4.4,
+    "p95": 9.41,
+    "p99": 42.63,
+    "max": 996.58,
+    "mean": 7.07
+   },
+   "p99_under_100ms": true
+  },
+  {
+   "phase": "stress @ 1000 TPS x 60s",
+   "target_tps": 1000,
+   "duration_s": 60,
+   "sent_events": 60056,
+   "achieved_publish_tps": 1000.0,
+   "processed_events": 60056,
+   "processing_tps": 542.8,
+   "drain_after_publish_s": 48.1,
+   "errors": 0,
+   "error_rate": 0.0,
+   "scoring_latency_ms": {
+    "n": 59999,
+    "p50": 5.03,
+    "p95": 8.96,
+    "p99": 15.44,
+    "max": 1025.84,
+    "mean": 5.64
+   },
+   "e2e_latency_ms": {
+    "n": 59999,
+    "p50": 21160.4,
+    "p95": 44819.38,
+    "p99": 46982.14,
+    "max": 47746.12,
+    "mean": 22781.87
+   },
+   "p99_under_100ms": true
+  },
+  {
+   "phase": "sync POST /v1/score (HTTP, sequential)",
+   "requests": 2000,
+   "errors": 0,
+   "client_latency_ms": {
+    "n": 2000,
+    "p50": 6.74,
+    "p95": 8.89,
+    "p99": 12.65,
+    "max": 125.7,
+    "mean": 7.1
+   },
+   "server_scoring_latency_ms": {
+    "n": 2000,
+    "p50": 3.69,
+    "p95": 5.17,
+    "p99": 7.12,
+    "max": 52.53,
+    "mean": 4.01
+   }
+  }
+ ],
+ "next_skip": 86000
+}
