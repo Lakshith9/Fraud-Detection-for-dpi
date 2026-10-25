@@ -1,0 +1,69 @@
+{
+  "from": "testingtoolkitdfsp",
+  "to": "payeefsp",
+  "id": "7cec31e8-eae8-41d6-8157-a2353c16cb55",
+  "content": {
+    "uriParams": {
+      "id": "7cec31e8-eae8-41d6-8157-a2353c16cb55"
+    },
+    "headers": {
+      "accept": "application/vnd.interoperability.transfers+json;version=2.0",
+      "content-type": "application/vnd.interoperability.transfers+json;version=2.0",
+      "date": "Sun, 25 Oct 2026 15:16:58 GMT",
+      "fspiop-source": "testingtoolkitdfsp",
+      "authorization": "{$inputs.TTK_BEARER_TOKEN}",
+      "traceparent": "00-e4cf29d2ca499b7c6c507bc3ef7251ab-0000000000000003-01",
+      "user-agent": "axios/1.8.4",
+      "content-length": "1426",
+      "accept-encoding": "gzip, compress, deflate, br",
+      "host": "ml-api-adapter:3000",
+      "connection": "keep-alive"
+    },
+    "payload": "data:application/vnd.interoperability.transfers+json;version=2.0;base64,eyJ0cmFuc2ZlcklkIjoiN2NlYzMxZTgtZWFlOC00MWQ2LTgxNTctYTIzNTNjMTZjYjU1IiwicGF5ZXJGc3AiOiJ0ZXN0aW5ndG9vbGtpdGRmc3AiLCJwYXllZUZzcCI6InBheWVlZnNwIiwiYW1vdW50Ijp7ImFtb3VudCI6IjEwMCIsImN1cnJlbmN5IjoiWFhYIn0sImV4cGlyYXRpb24iOiIyMDI2LTEwLTI2VDE1OjE2OjUyLjM3MloiLCJpbHBQYWNrZXQiOiJBWUlEWkFBQUFBQUFEMEpBSFdjdWNHRjVaV1ZtYzNBdWJYTnBjMlJ1TGpJM056RXpPREF6T1RFeWdnTTZaWGxLTUdOdFJuVmpNa1pxWkVkc2RtSnJiR3RKYW05cFRqSk9iRmw2VFhoYVZHZDBXbGRHYkU5RE1EQk5WMUV5VEZSbmVFNVVZM1JaVkVsNlRsUk9hazFVV21wWmFsVXhTV2wzYVdOWVZuWmtSMVpLV2tOSk5rbHFTVFZhVkZVd1dsZFpOVXhVVFROT2JWbDBUa1JCZVZsVE1XbGFSRkUwVEZSck1FOVhSVEphYWxwclRrZE5lVTVwU1hOSmJrSm9aVmRXYkVscWNEZEpia0pvWTI1U05WTlhVa3BpYlZwMlNXcHdOMGx1UW1oamJsSTFVMWRTVldWWVFteEphbTlwVkZaT1NsVXdVazlKYVhkcFkwZEdlV1JJYkVwYVIxWjFaRWRzYldGWFZubEphbTlwVFdwak0wMVVUVFJOUkUwMVRWUkphVXhEU20xak0wSktXa05KTmtsdVFtaGxWMVpzV201T2QwbHVNVGxNUTBwM1dWaHNiR05wU1RabGVVcDNXVmhLTUdWVmJHdFRWelZ0WW5sSk5tVjVTbmRaV0Vvd1pWVnNhMVpJYkhkYVUwazJTV3N4VkZOV1RrVlVhVWx6U1c1Q2FHTnVValZUVjFKc1ltNVNjRnB0Ykd4amFVazJTV3BSTUUxVVNYcE9SRlV5VG5wbk5VbHBkMmxhYms1M1UxZFJhVTlwU2pCYVdFNHdZVmMxYm1SSE9YWmlSM1J3WkVkU2JXTXpRV2xtVTNkcFkwZFdlV015T1hWWlYzaEtZbTFhZGtscWNEZEpiVTUyWWxoQ2MxcFlhRTlaVnpGc1NXcHdOMGx0V25CamJrNHdWRzFHZEZwVFNUWkphMXB3WTI1T01HSnRSblJhVXpGVldsaE9NRWxwZDJsaVIwWjZaRVUxYUdKWFZXbFBhVXBOV1ZoT01HSnRSblJhVXpGVldsaE9NRWx1TUhOSmJWSm9aRWRXVUZwclNuQmpibEp2U1dwdmFVMVVhelJPUXpCM1RWTXdkMDFUU2psbVUzZHBXVmN4ZG1SWE5UQkphbkEzU1cxU2RtSkhPWGxZZWs1b1NXcHdNR051Vm14TVEwcHFaRmhLZVZwWE5XcGxVMGsyU1d4b1dWZERTWE5KYlVaMFlqTldkV1JEU1RaSmFrVjNUVU5LT1V4RFNqQmpiVVoxWXpKR2FtUkhiSFppYkZJMVkwZFZhVTl1YzJsak1rNXNZbTFHZVdGWE9HbFBhVXBWVld0R1QxVXdXa1pWYVVselNXMXNkV0ZZVW5CWldGSjJZMmxKTmtsc1FrSlhWVlpUU1dsM2FXRlhOWEJrUjJ4b1pFYzVlVlpJYkhkYVUwazJTV3RPVUZSc1RsWlVWVlpUU1c0d2MwbHRWalJqUjJ4NVdWaFNjR0l5TkdsUGFVbDVUVVJKTWt4VVJYZE1WRWt5VmtSRk1VOXFSVEpQYWxWNVRHcE5NMDFzYjJsbVVRQSIsImNvbmRpdGlvbiI6InNWOW5ZOXhTS0tUR0d6NWpjd3J2VnpldWNmT1l2Y2FWaUx6cFhYeS0yOFEifQ==",
+    "context": {}
+  },
+  "type": "application/json",
+  "metadata": {
+    "correlationId": "7cec31e8-eae8-41d6-8157-a2353c16cb55",
+    "event": {
+      "type": "prepare",
+      "action": "prepare",
+      "createdAt": "2026-10-25T15:16:59.265Z",
+      "state": {
+        "status": "success",
+        "code": 0,
+        "description": "action successful"
+      }
+    },
+    "trace": {
+      "service": "transfers",
+      "traceId": "e4cf29d2ca499b7c6c507bc3ef7251ab",
+      "spanId": "98afe1ec407b111d",
+      "sampled": 1,
+      "flags": "01",
+      "startTimestamp": "2026-10-25T15:16:58.241Z",
+      "tags": {
+        "tracestate": "acmevendor=eyJzcGFuSWQiOiI5OGFmZTFlYzQwN2IxMTFkIiwidGltZUFwaVByZXBhcmUiOiIxNzkyOTQxNDE4MjU3In0=",
+        "transactionType": "transfer",
+        "transactionAction": "prepare",
+        "transactionId": "7cec31e8-eae8-41d6-8157-a2353c16cb55",
+        "source": "testingtoolkitdfsp",
+        "payerFsp": "testingtoolkitdfsp",
+        "payeeFsp": "payeefsp",
+        "serviceName": "ml-api-adapter-service",
+        "auditType": "transactionFlow",
+        "contentType": "httpRequest",
+        "operation": "prepareTransfer",
+        "httpMethod": "post",
+        "transferId": "7cec31e8-eae8-41d6-8157-a2353c16cb55"
+      },
+      "tracestates": {
+        "acmevendor": {
+          "spanId": "98afe1ec407b111d",
+          "timeApiPrepare": "1792941418257"
+        }
+      }
+    },
+    "protocol.createdAt": 1792941419267
+  }
+}

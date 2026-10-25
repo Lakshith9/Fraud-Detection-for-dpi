@@ -1,21 +1,22 @@
 """Thin adapter between Mojaloop FSPIOP-style transfer events and the engine's internal transaction schema.
 
-The simulator renders internal rows as Mojaloop *transfer prepare* messages, shaped like the events the
-Mojaloop central-ledger publishes on its ``topic-transfer-prepare`` Kafka topic::
+Mojaloop's ml-api-adapter publishes every ``POST /transfers`` as a *transfer prepare* event on the
+``topic-transfer-prepare`` Kafka topic::
 
     {"id", "from", "to", "type", "content": {"headers": {...}, "payload": <POST /transfers body>},
      "metadata": {"event": {"type": "transfer", "action": "prepare", "createdAt": ISO-8601}}}
 
-In real Mojaloop the payer/payee party details and transactionType live inside the ILP packet's ``data``
-field (base64url encoded FSPIOP ``Transaction`` object). Here the ILP packet is MOCKED: it is the
-base64url encoded JSON Transaction object without the OER/ILP envelope. Risk signals that FSPIOP does not
-carry natively (device, IP, geo, channel, device-binding time) travel in the standard ``extensionList``.
+On a live switch ``content.payload`` is a data URI
+(``data:application/vnd.interoperability.transfers+json;version=1.1;base64,<body>``); the simulator sends the
+body as a JSON object. ``from_fspiop`` accepts both, and also a bare ``POST /transfers`` body.
 
-``from_fspiop`` also accepts a bare ``POST /transfers`` body (payload only), which is what a real Mojaloop
-sandbox callback or a Kafka consumer on central-ledger would hand you, so a live switch can be plugged in by
-pointing a consumer at its topic and calling ``from_fspiop`` on each message.
+The payer/payee party details and transactionType live inside the ILP packet's ``data`` field (FSPIOP
+``Transaction`` object). ``pipeline.ilp`` decodes real OER packets (ILPv4 Prepare, ILPv1 Payment) as well as
+the simulator's mocked packet (base64url JSON Transaction, no envelope). Risk signals that FSPIOP does not
+carry natively (device, IP, geo, channel, device-binding time) travel in the standard ``extensionList``; on a
+live switch they are empty unless the FSPs populate them.
 
-This is a Mojaloop-compatible SIMULATION + adapter, not a live Mojaloop integration.
+``pipeline.mojaloop_consumer`` feeds a live switch's Kafka topic through this adapter onto the scoring stream.
 """
 
 from __future__ import annotations
@@ -25,8 +26,11 @@ import hashlib
 from datetime import UTC, datetime
 from email.utils import formatdate
 from typing import Any
+from urllib.parse import unquote_to_bytes
 
 import orjson
+
+from pipeline.ilp import IlpError, b64_any, decode_ilp_packet
 
 _EXT_KEYS = {
     "deviceId": "device_id",
@@ -48,11 +52,6 @@ class AdapterError(ValueError):
 
 def _b64e(obj: Any) -> str:
     return base64.urlsafe_b64encode(orjson.dumps(obj)).decode().rstrip("=")
-
-
-def _b64d(s: str) -> Any:
-    pad = "=" * (-len(s) % 4)
-    return orjson.loads(base64.urlsafe_b64decode(s + pad))
 
 
 def _iso(ms: int) -> str:
@@ -159,13 +158,60 @@ def _party_key(party: dict) -> tuple[str, str, str, str]:
     return str(pid), alias, str(info.get("fspId") or ""), kind
 
 
+def decode_payload(payload: Any) -> dict:
+    """Return the ``POST /transfers`` body of an event as a dict (it may arrive as a data URI string)."""
+    if isinstance(payload, dict):
+        return payload
+    if isinstance(payload, (bytes, bytearray)):
+        payload = payload.decode("utf-8", errors="replace")
+    if not isinstance(payload, str) or not payload:
+        raise AdapterError("event has no payload")
+    if payload.startswith("data:"):
+        header, sep, data = payload.partition(",")
+        if not sep:
+            raise AdapterError("malformed data URI payload")
+        try:
+            raw = b64_any(data) if header.endswith(";base64") else unquote_to_bytes(data)
+        except IlpError as e:
+            raise AdapterError(f"undecodable data URI payload: {e}") from e
+    else:
+        raw = payload.encode()
+    try:
+        body = orjson.loads(raw)
+    except orjson.JSONDecodeError as e:
+        raise AdapterError(f"payload is not JSON: {e}") from e
+    if not isinstance(body, dict):
+        raise AdapterError("payload is not a JSON object")
+    return body
+
+
+def is_transfer_prepare(msg: dict) -> bool:
+    """True for transfer prepare events; False for other actions that may share a topic (bulk, fx, ...).
+
+    ml-api-adapter tags these events ``type: "prepare"`` (older releases and the simulator use ``"transfer"``).
+    """
+    event = (msg.get("metadata") or {}).get("event") or {}
+    if not event:
+        return "content" in msg or "transferId" in msg
+    return event.get("type", "prepare") in ("prepare", "transfer") and event.get("action", "prepare") == "prepare"
+
+
+def normalize_message(msg: dict) -> dict:
+    """Copy of a transfer-prepare event with ``content.payload`` decoded to a dict (the simulator's shape)."""
+    if "content" not in msg:
+        return msg
+    content = dict(msg.get("content") or {})
+    content["payload"] = decode_payload(content.get("payload"))
+    return {**msg, "content": content}
+
+
 def from_fspiop(msg: dict) -> dict:
     """Map a Mojaloop transfer-prepare message (or bare POST /transfers body) to the internal schema.
 
     Missing optional fields are filled with neutral defaults; missing mandatory fields raise AdapterError.
     """
     if "content" in msg:
-        payload = (msg.get("content") or {}).get("payload") or {}
+        payload = decode_payload((msg.get("content") or {}).get("payload"))
         created = ((msg.get("metadata") or {}).get("event") or {}).get("createdAt")
     else:
         payload, created = msg, msg.get("createdAt")
@@ -178,8 +224,8 @@ def from_fspiop(msg: dict) -> dict:
     trx: dict = {}
     if payload.get("ilpPacket"):
         try:
-            trx = _b64d(payload["ilpPacket"])
-        except Exception:  # a real OER ILP packet can't be decoded here; fall back to header-level data
+            trx = decode_ilp_packet(str(payload["ilpPacket"])).transaction
+        except IlpError:  # unreadable packet: fall back to header-level data (FSP-level identities)
             trx = {}
     payer_id, payer_alias, payer_fsp, payer_kind = _party_key(trx.get("payer") or {})
     payee_id, payee_alias, payee_fsp, payee_kind = _party_key(trx.get("payee") or {})
