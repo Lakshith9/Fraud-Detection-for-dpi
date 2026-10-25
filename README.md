@@ -5,12 +5,13 @@ on Mojaloop / UPI-like rails. It scores every transfer before settlement with an
 graph analysis), detects fraud rings asynchronously, explains every decision with SHAP, and retrains from operator
 feedback behind a promotion gate.
 
-> **Important — simulation, not a live integration.** All traffic is **synthetic Mojaloop-style data**. The
-> simulator emits FSPIOP *transfer-prepare* messages (the shape of Mojaloop central-ledger `topic-transfer-prepare`
-> events, with a mocked ILP packet carrying the FSPIOP `Transaction` object). There is **no connection to a real
-> Mojaloop switch**. `pipeline/mojaloop_adapter.py` is the seam where a real sandbox's Kafka events or FSPIOP
-> callbacks would be plugged in. All metrics are measured on synthetic data and are **not** a prediction of
-> real-world performance (see [docs/model_card.md](docs/model_card.md)).
+> **Important — synthetic data; live Mojaloop connection available.** The demo traffic and every reported
+> metric come from **synthetic Mojaloop-style data**: the simulator emits FSPIOP *transfer-prepare* messages (the
+> shape of Mojaloop `topic-transfer-prepare` events). The engine can also read a **real Mojaloop switch**:
+> `pipeline/mojaloop_consumer.py` consumes the switch's Kafka topic, decodes real ILP packets and feeds the same
+> pipeline (see [docs/mojaloop_integration.md](docs/mojaloop_integration.md)); this was tested against Mojaloop's
+> `ml-core-test-harness`, not a production switch. Metrics are **not** a prediction of real-world performance (see
+> [docs/model_card.md](docs/model_card.md)).
 
 ## What it detects
 
@@ -58,7 +59,7 @@ fraud-engine/
   docker-compose.yml  Makefile  README.md  .env.example  requirements.txt  pyproject.toml
   core/        settings, structured logging, PostgreSQL schema/pool, Redis client
   data_gen/    synthetic Mojaloop-style data generator (entities, typologies, hard negatives, drift)
-  pipeline/    Mojaloop adapter, feature engine + state stores, replay, scorer, stream worker, persister, bootstrap
+  pipeline/    Mojaloop adapter + ILP decoder + live Kafka consumer, feature engine + state stores, replay, scorer, stream worker, persister, bootstrap
   models/      training, LSTM/ONNX, ensemble, SHAP explanations, metrics, registry, feedback retraining
   graph/       ring detectors, node scoring, graph worker, ring evaluation, optional Neo4j sink
   api/         FastAPI app (REST + WebSocket), auth, metrics, routes
@@ -122,6 +123,14 @@ python -m simulator.simulator --tps 200 --loop
 cd dashboard && npm run dev                          # http://localhost:5173
 ```
 
+## Live Mojaloop connection
+
+`python -m pipeline.mojaloop_consumer` reads a Mojaloop switch's Kafka topic `topic-transfer-prepare` (own consumer
+group, so the switch is unaffected) and feeds the scoring pipeline; with Docker, add
+`-f docker-compose.mojaloop.yml` to join the switch's `mojaloop-net` network. Tested against Mojaloop's
+`ml-core-test-harness`: real P2P transfers were decoded (including the binary ILP packet), scored in 4.5–9.4 ms
+and shown via the API. Setup, message format and results: [docs/mojaloop_integration.md](docs/mojaloop_integration.md).
+
 ## Demo scripts, tests and benchmarks
 
 These need the system running for `bench` and `feedback-demo`.
@@ -169,6 +178,8 @@ All endpoints except `/healthz` and `/metrics` require `X-API-Key: <operator key
 | `GRAPH_INTERVAL_S` / `GRAPH_WINDOW_HOURS` / `GRAPH_STALE_AFTER_S` | 20 / 24 / 300 | Graph worker cadence, window, staleness for degraded mode |
 | `GRAPH_BACKEND` | `networkx` | `neo4j` additionally mirrors rings to Neo4j (`NEO4J_URI/USER/PASSWORD`, needs `pip install neo4j`) |
 | `MODEL_POLL_INTERVAL_S` | 5 | Hot-reload polling of `model:current` |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` (`kafka:29092` in the Mojaloop overlay) | Live Mojaloop switch's Kafka |
+| `MOJALOOP_PREPARE_TOPIC` / `MOJALOOP_CONSUMER_GROUP` / `MOJALOOP_OFFSET_RESET` | `topic-transfer-prepare` / `fraud-engine` / `latest` | Topic, consumer group, start position of a new group |
 | `RETRAIN_INTERVAL_HOURS` / `RETRAIN_MIN_FEEDBACK` / `RETRAIN_TOLERANCE` | 24 / 50 / 0.01 | Scheduled retraining and promotion gate |
 | `SETTLEMENT_CUTOFF_HOURS` | `[0,6,12,18]` | Settlement-window cutoffs (UTC) |
 | `SHAP_SYNC_FOR_ALLOW` | false | Compute ALLOW explanations synchronously |
@@ -244,7 +255,7 @@ v2 without restart.
 | Brief | What was built | Reason |
 |---|---|---|
 | Redpanda/Kafka | **Redis Streams** (consumer groups, payer-hash partitions, pending-entry recovery, DLQ) | Redis was already required for the feature store; the build machine has 7.6 GB RAM and no Docker. The transport is isolated in `pipeline/worker.py` / `simulator/simulator.py` |
-| Live Mojaloop | Mojaloop-style **simulation** + `pipeline/mojaloop_adapter.py` (FSPIOP transfer-prepare ↔ internal schema; mocked ILP packet) | No Mojaloop sandbox available; the adapter is the integration seam |
+| Live Mojaloop | Mojaloop-style **simulation** for all reported metrics; live connection via `pipeline/mojaloop_consumer.py` (Kafka `topic-transfer-prepare`, real ILP decoding), tested against `ml-core-test-harness` | No production switch or real labelled transfers available; see [docs/mojaloop_integration.md](docs/mojaloop_integration.md) |
 | Neo4j | NetworkX (default, fully working); optional Neo4j mirror behind `GRAPH_BACKEND=neo4j` | No Neo4j server available. **The Neo4j sink was not executed in any run** |
 | `docker compose up` verified from a fresh clone | Compose file + Dockerfiles written; system verified natively (PostgreSQL 16 + Redis 7 in WSL) | Docker is not installed on the build machine |
 | `make` targets | Makefile is a thin wrapper over `scripts/tasks.py` and the module commands that were actually run | `make` is not installed on the Windows build machine |
@@ -271,8 +282,8 @@ v2 without restart.
 
 ## Suggested next steps
 
-1. Connect `mojaloop_adapter.from_fspiop` to a Mojaloop sandbox (central-ledger Kafka topic or a
-   transfer-prepare callback) and replay real test traffic.
+1. Run the live Mojaloop consumer in shadow mode on real traffic, label alerts and retrain on real transfers; ask
+   FSPs to send device/IP/geo signals in the transfer `extensionList`.
 2. Add cohort-level fairness monitoring (FPR by FSP, region, account age, device-sharing cohort) and random audits
    of ALLOWed traffic to counter feedback selection bias.
 3. Make the graph worker incremental (streaming edge updates) and feed ring membership into the sequence model.

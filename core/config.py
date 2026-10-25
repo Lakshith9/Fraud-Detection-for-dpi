@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     stream_maxlen: int = 50_000  # per partition; processed events are trimmed (bounded Redis memory)
     consumer_group: str = "scorers"
 
+    # --- live Mojaloop switch (pipeline.mojaloop_consumer) ----------------
+    kafka_bootstrap_servers: str = "localhost:9092"
+    mojaloop_prepare_topic: str = "topic-transfer-prepare"
+    mojaloop_consumer_group: str = "fraud-engine"  # own group: reads alongside central-ledger, never instead of it
+    mojaloop_offset_reset: str = "latest"  # where a brand-new group starts: "latest" | "earliest"
+
     # --- paths ------------------------------------------------------------
     data_dir: Path = ROOT / "data"
     artifacts_dir: Path = ROOT / "models" / "artifacts"

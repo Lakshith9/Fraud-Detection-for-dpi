@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import time
-import zlib
 from pathlib import Path
 
 import numpy as np
@@ -21,7 +20,7 @@ import pandas as pd
 
 from core.config import get_settings
 from core.logging import get_logger, setup_logging
-from core.redis_client import get_redis, stream_key
+from core.redis_client import get_redis, partition_of, stream_key
 from pipeline.mojaloop_adapter import to_fspiop
 
 log = get_logger("simulator")
@@ -51,10 +50,6 @@ TX_COLS = [
     "merchant_category",
     "original_transfer_id",
 ]
-
-
-def partition_of(payer_id: str, n: int) -> int:
-    return zlib.crc32(payer_id.encode()) % n
 
 
 def build_timeline(data_dir: Path, from_day: int, to_day: int, limit: int | None, skip: int = 0):
