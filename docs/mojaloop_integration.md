@@ -96,9 +96,10 @@ Found by the live test and fixed: ml-api-adapter tags prepare events `type: "pre
 first version of the event filter would have skipped every real transfer.
 
 Not tested here: the `docker-compose.mojaloop.yml` overlay (validated with `docker compose config`; the app
-image was not built in this environment), high-volume load from a switch, and FSPs sending device/geo extensions.
-The low risk scores show the model working on thin signals: with no device or history data, an ordinary
-100-unit transfer looks safe; this says nothing about how well it would catch real fraud.
+image was not built in this environment). The low risk scores show the model working on thin signals: with no
+device or history data, an ordinary 100-unit transfer looks safe; this says nothing about how well it would catch
+real fraud. Fraud detection through the switch, with and without device extensions and at volume, is measured in
+[mojaloop_fraud_test.md](mojaloop_fraud_test.md).
 
 ## Operating notes
 

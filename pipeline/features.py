@@ -256,13 +256,8 @@ class FeatureEngine:
             ("ltrim", k["ph"], 0, HIST_LEN - 1),
             ("zadd", k["zq"], {tid: ts}),
             ("zremrangebyscore", k["zq"], "-inf", ts - DAY - HOUR),
-            ("zadd", k["zd"], {tid: ts}),
-            ("zremrangebyscore", k["zd"], "-inf", ts - DAY - HOUR),
             ("sadd", k["in_q"], p),
             ("sadd", k["out_p"], q),
-            ("sadd", k["dacc"], p),
-            ("sadd", k["pdev"], k["dev"]),
-            ("sadd", k["iacc"], p),
             ("zadd", k["inf_q"], {f"{tid}:{ts}:{amt:.2f}": ts}),
             ("zremrangebyscore", k["inf_q"], "-inf", ts - DAY - HOUR),
             ("hsetnx", k["cnt_p"], "fs", ts),
@@ -272,6 +267,15 @@ class FeatureEngine:
             ("hincrby", k["fspn"], str(b), 1),
             ("hdel", k["fspn"], *old),
         ]
+        if tx.get("device_id"):  # an absent device is unknown, not one device shared by every account
+            plan += [
+                ("zadd", k["zd"], {tid: ts}),
+                ("zremrangebyscore", k["zd"], "-inf", ts - DAY - HOUR),
+                ("sadd", k["dacc"], p),
+                ("sadd", k["pdev"], k["dev"]),
+            ]
+        if tx.get("ip"):
+            plan.append(("sadd", k["iacc"], p))
         if tx.get("scenario") in ("REFUND", "REVERSAL"):
             plan.append(("hincrby", k["cnt_p"], "rev", 1))
         if is_round_high_value(amt):
@@ -356,10 +360,15 @@ class FeatureEngine:
             last = None
             secs_since = NAN
 
-        dev_accounts = float(r[9]) + (0.0 if r[10] else 1.0)
-        ip_accounts = float(r[12]) + (0.0 if r[13] else 1.0)
-        new_device = 0.0 if r[10] else 1.0
-        payer_dev_count = float(r[11]) + new_device
+        # FSPIOP carries device / IP only when the FSP sends them: without one, its features are unknown (NaN)
+        if tx.get("device_id"):
+            dev_tx_1h, dev_tx_24h = float(r[3]), float(r[4])
+            dev_accounts = float(r[9]) + (0.0 if r[10] else 1.0)
+            new_device = 0.0 if r[10] else 1.0
+            payer_dev_count = float(r[11]) + new_device
+        else:
+            dev_tx_1h = dev_tx_24h = dev_accounts = new_device = payer_dev_count = NAN
+        ip_accounts = float(r[12]) + (0.0 if r[13] else 1.0) if tx.get("ip") else NAN
         bound = tx.get("device_bound_at")
         bind_age = math.log1p(max(0.0, (ts - int(bound)) / HOUR)) if bound not in (None, "", 0) else NAN
 
@@ -413,8 +422,8 @@ class FeatureEngine:
             math.log1p(p_amt_1h),
             float(r[1]),
             float(r[2]),
-            float(r[3]),
-            float(r[4]),
+            dev_tx_1h,
+            dev_tx_24h,
             new_payee,
             float(r[7]),
             float(r[5]),
@@ -535,7 +544,7 @@ class FeatureEngine:
             row[3] = math.cos(2 * math.pi * hr / 24)
             row[4] = gap
             row[5] = 0.0 if s[2] in seen else 1.0
-            row[6] = 1.0 if prev and prev[3] != s[3] else 0.0
+            row[6] = 1.0 if prev and prev[3] and s[3] and prev[3] != s[3] else 0.0
             row[7] = jump
             row[8] = 1.0 if round_level(s[1]) >= 2 else 0.0
             row[9] = 1.0 if s[6] == "M" else 0.0

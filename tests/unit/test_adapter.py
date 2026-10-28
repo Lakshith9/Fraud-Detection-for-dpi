@@ -39,7 +39,7 @@ def test_fspiop_message_shape():
     assert msg["metadata"]["event"]["action"] == "prepare"
     assert msg["content"]["headers"]["fspiop-source"] == "dfsp-01"
     assert set(p) >= {"transferId", "payerFsp", "payeeFsp", "amount", "ilpPacket", "condition", "expiration"}
-    assert p["amount"] == {"amount": "500.00", "currency": "INR"}
+    assert p["amount"] == {"amount": "500", "currency": "INR"}  # FSPIOP Amount: no trailing zeros
 
 
 def test_reversal_maps_to_refund_subscenario_and_back():

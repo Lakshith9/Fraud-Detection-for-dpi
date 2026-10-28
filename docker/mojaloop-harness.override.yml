@@ -1,0 +1,14 @@
+# Copy into a mojaloop/ml-core-test-harness checkout as docker-compose.override.yml (docs/mojaloop_integration.md).
+# Publishes what the fraud engine needs on localhost and lets the switch route same-FSP ("on-us") transfers.
+services:
+  kafka:
+    ports:
+      - "9092:9092" # topic-transfer-prepare for pipeline.mojaloop_consumer
+  ml-api-adapter:
+    ports:
+      - "3000:3000" # FSPIOP API for simulator.mojaloop_sender
+  central-ledger:
+    ports:
+      - "3001:3001" # admin API: onboarding the dataset's FSPs
+    environment:
+      CLEDG_ENABLE_ON_US_TRANSFERS: "true"
