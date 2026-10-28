@@ -1,0 +1,57 @@
+{
+  "label": "direct",
+  "transfers_expected": 54124,
+  "transfers_scored": 54124,
+  "frauds": 144,
+  "pr_auc": 0.7765,
+  "roc_auc": 0.9842,
+  "recall_at_1pct_fpr": 0.8958,
+  "alerts_review_or_block": {
+    "flagged": 538,
+    "frauds_caught": 124,
+    "frauds_missed": 20,
+    "false_alarms": 414,
+    "recall": 0.8611,
+    "precision": 0.2305,
+    "false_alarm_rate": 0.00767
+  },
+  "blocks": {
+    "flagged": 143,
+    "frauds_caught": 104,
+    "frauds_missed": 40,
+    "false_alarms": 39,
+    "recall": 0.7222,
+    "precision": 0.7273,
+    "false_alarm_rate": 0.000722
+  },
+  "per_fraud_type": {
+    "identity_spoofing": {
+      "frauds": 74,
+      "caught": 59,
+      "recall": 0.7973
+    },
+    "settlement_manipulation": {
+      "frauds": 7,
+      "caught": 7,
+      "recall": 1.0
+    },
+    "transaction_laundering": {
+      "frauds": 63,
+      "caught": 58,
+      "recall": 0.9206
+    }
+  },
+  "decisions": {
+    "ALLOW": 53586,
+    "REVIEW": 395,
+    "BLOCK": 143
+  },
+  "scoring_latency_ms": {
+    "p50": 4.33,
+    "p95": 6.5,
+    "p99": 10.01
+  },
+  "degraded_combos": {
+    "xgb_graph": 3
+  }
+}

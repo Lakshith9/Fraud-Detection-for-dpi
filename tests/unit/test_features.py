@@ -163,3 +163,13 @@ def test_known_device_features_unchanged():
     assert fv.tabular[F["device_accounts"]] == 2.0
     assert fv.tabular[F["device_tx_1h"]] == 1.0
     assert fv.tabular[F["new_device_for_payer"]] == 1.0
+
+
+def test_every_reason_text_handles_unknown_values():
+    """Missing signals (NaN) must never crash the explanation, e.g. FSPIOP transfers without device data."""
+    from models.explain import reason_text
+
+    for name in [*TABULAR_FEATURES, *GRAPH_FEATURES, "sequence_logit"]:
+        assert isinstance(reason_text(name, float("nan"), {}), str), name
+    assert reason_text("new_device_for_payer", float("nan"), {}) == "device not reported by the FSP"
+    assert reason_text("ip_accounts", float("nan"), {}) == "IP address not reported by the FSP"
