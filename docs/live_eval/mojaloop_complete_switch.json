@@ -1,0 +1,25 @@
+{
+  "run_id": "20261028T161056",
+  "window_days": [
+    46,
+    51
+  ],
+  "device_signals": true,
+  "transfers": 15182,
+  "frauds": 57,
+  "sent": 15182,
+  "accepted": 15182,
+  "rejected": 0,
+  "http_errors": 0,
+  "reports": 14,
+  "seconds": 1123.2,
+  "rejections": {},
+  "switch": {
+    "prepares_received": 15182,
+    "fulfils_sent": 15182,
+    "fulfil_errors": 0,
+    "committed": 15182,
+    "errors": 0,
+    "final_errors": {}
+  }
+}

@@ -127,3 +127,35 @@ def decode_ilp_packet(packet: str) -> IlpPacket:
     if ptype == TYPE_ILP_PAYMENT_V1:
         return _parse_payment_v1(body)
     raise IlpError(f"unsupported ILP packet type {ptype}")
+
+
+def _oer_var(b: bytes) -> bytes:
+    if len(b) < 0x80:
+        return bytes([len(b)]) + b
+    n = (len(b).bit_length() + 7) // 8
+    return bytes([0x80 | n]) + len(b).to_bytes(n, "big") + b
+
+
+def b64url(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).decode().rstrip("=")
+
+
+def encode_ilp_prepare(
+    transaction: dict[str, Any], amount: int, destination: str, expires_at: str, condition: bytes
+) -> str:
+    """Build an FSPIOP ``ilpPacket``: ILPv4 Prepare whose data is the base64url JSON ``Transaction``.
+
+    ``amount`` is in the currency's minor units, ``expires_at`` is ``YYYYMMDDHHmmssfff`` (17 chars, UTC) and
+    ``condition`` is the 32-byte SHA-256 execution condition (the same one sent as the transfer's ``condition``).
+    """
+    if len(expires_at) != 17 or len(condition) != 32:
+        raise IlpError("expires_at must be 17 chars and condition 32 bytes")
+    data = b64url(orjson.dumps(transaction)).encode()
+    body = (
+        int(amount).to_bytes(8, "big")
+        + expires_at.encode("ascii")
+        + condition
+        + _oer_var(destination.encode("ascii"))
+        + _oer_var(data)
+    )
+    return b64url(bytes([TYPE_ILP_PREPARE_V4]) + _oer_var(body))

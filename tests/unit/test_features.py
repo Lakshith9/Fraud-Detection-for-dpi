@@ -139,3 +139,37 @@ def test_graph_features_read_from_store():
     assert g["payee_ring_score"] == pytest.approx(0.8)
     assert g["in_cycle"] == 1 and g["max_ring_size"] == 5
     assert fv.context["payee_ring"]["rid"] == "R-1"
+
+
+def test_missing_device_and_ip_are_unknown_not_a_shared_device():
+    """FSPIOP transfers without device/IP extensions must not collapse onto one shared "" device (device farm)."""
+    e, s = FeatureEngine(), InMemoryStore()
+    run(e, s, base_tx(transfer_id="h1", ts=base_tx()["ts"] - HOUR))  # payer history with a known device
+    for i in range(30):  # many other accounts without device / IP data
+        run(e, s, base_tx(transfer_id=f"o{i}", payer_id=f"other-{i}", device_id="", ip=""))
+    tx = base_tx(transfer_id="t1", device_id="", ip="")
+    assert not any(op[1].startswith(("dacc:", "pdev:", "iacc:", "zt:d:")) for op in e.write_plan(tx))
+    fv = run(e, s, tx)
+    for name in ("device_tx_1h", "device_tx_24h", "device_accounts", "new_device_for_payer", "payer_device_count"):
+        assert math.isnan(fv.tabular[F[name]]), name
+    assert math.isnan(fv.tabular[F["ip_accounts"]])
+    assert fv.seq[-1, 6] == 0.0  # unknown device is not a "device change"
+
+
+def test_known_device_features_unchanged():
+    e, s = FeatureEngine(), InMemoryStore()
+    run(e, s, base_tx(transfer_id="a", payer_id="p1", device_id="shared", ts=base_tx()["ts"] - 2 * MIN))
+    fv = run(e, s, base_tx(transfer_id="b", payer_id="p2", device_id="shared"))
+    assert fv.tabular[F["device_accounts"]] == 2.0
+    assert fv.tabular[F["device_tx_1h"]] == 1.0
+    assert fv.tabular[F["new_device_for_payer"]] == 1.0
+
+
+def test_every_reason_text_handles_unknown_values():
+    """Missing signals (NaN) must never crash the explanation, e.g. FSPIOP transfers without device data."""
+    from models.explain import reason_text
+
+    for name in [*TABULAR_FEATURES, *GRAPH_FEATURES, "sequence_logit"]:
+        assert isinstance(reason_text(name, float("nan"), {}), str), name
+    assert reason_text("new_device_for_payer", float("nan"), {}) == "device not reported by the FSP"
+    assert reason_text("ip_accounts", float("nan"), {}) == "IP address not reported by the FSP"

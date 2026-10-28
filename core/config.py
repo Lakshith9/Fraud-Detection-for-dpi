@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     mojaloop_prepare_topic: str = "topic-transfer-prepare"
     mojaloop_consumer_group: str = "fraud-engine"  # own group: reads alongside central-ledger, never instead of it
     mojaloop_offset_reset: str = "latest"  # where a brand-new group starts: "latest" | "earliest"
+    # Use the FSP-supplied ``eventTime`` extension as the event time instead of the switch's receive time.
+    # Only for replaying historical traffic through a switch (simulator/mojaloop_sender.py); an FSP could
+    # otherwise shift its own time features.
+    trust_fsp_event_time: bool = False
 
     # --- paths ------------------------------------------------------------
     data_dir: Path = ROOT / "data"

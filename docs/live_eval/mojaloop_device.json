@@ -1,0 +1,57 @@
+{
+  "label": "mojaloop_device",
+  "transfers_expected": 54124,
+  "transfers_scored": 54095,
+  "frauds": 144,
+  "pr_auc": 0.7524,
+  "roc_auc": 0.9843,
+  "recall_at_1pct_fpr": 0.8681,
+  "alerts_review_or_block": {
+    "flagged": 525,
+    "frauds_caught": 120,
+    "frauds_missed": 24,
+    "false_alarms": 405,
+    "recall": 0.8333,
+    "precision": 0.2286,
+    "false_alarm_rate": 0.007507
+  },
+  "blocks": {
+    "flagged": 140,
+    "frauds_caught": 103,
+    "frauds_missed": 41,
+    "false_alarms": 37,
+    "recall": 0.7153,
+    "precision": 0.7357,
+    "false_alarm_rate": 0.000686
+  },
+  "per_fraud_type": {
+    "identity_spoofing": {
+      "frauds": 74,
+      "caught": 58,
+      "recall": 0.7838
+    },
+    "settlement_manipulation": {
+      "frauds": 7,
+      "caught": 7,
+      "recall": 1.0
+    },
+    "transaction_laundering": {
+      "frauds": 63,
+      "caught": 55,
+      "recall": 0.873
+    }
+  },
+  "decisions": {
+    "ALLOW": 53570,
+    "REVIEW": 385,
+    "BLOCK": 140
+  },
+  "scoring_latency_ms": {
+    "p50": 8.86,
+    "p95": 26.35,
+    "p99": 49.62
+  },
+  "degraded_combos": {
+    "xgb_graph": 183
+  }
+}

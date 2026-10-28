@@ -20,9 +20,30 @@ def _fmt_amt(x):
     return f"{x:,.0f}"
 
 
+_DEVICE_FEATURES = {"device_accounts", "device_tx_1h", "device_tx_24h", "new_device_for_payer", "payer_device_count"}
+# reasons worded from the context (ctx), not from the feature value
+_CONTEXT_FEATURES = {
+    "amount_log",
+    "near_settlement_cutoff",
+    "mins_to_settlement_cutoff",
+    "sequence_logit",
+    "payer_ring_score",
+    "payee_ring_score",
+    "device_ring_score",
+    "in_cycle",
+    "max_ring_size",
+}
+
+
 def reason_text(name: str, value: float, ctx: dict) -> str:
     v = value
     nan = v is None or (isinstance(v, float) and math.isnan(v))
+    if nan and name in _DEVICE_FEATURES:
+        return "device not reported by the FSP"
+    if nan and name == "ip_accounts":
+        return "IP address not reported by the FSP"
+    if nan and name not in _CONTEXT_FEATURES:  # every text below formats the value itself
+        return f"{name.replace('_', ' ')} unavailable"
     if name == "amount_ratio_mean_30d" and not nan:
         return f"amount {v:.1f}x this payer's 30-day average"
     if name == "amount_ratio_max_30d" and not nan:

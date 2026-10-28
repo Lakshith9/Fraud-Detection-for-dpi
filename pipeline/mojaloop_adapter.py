@@ -30,6 +30,7 @@ from urllib.parse import unquote_to_bytes
 
 import orjson
 
+from core.config import get_settings
 from pipeline.ilp import IlpError, b64_any, decode_ilp_packet
 
 _EXT_KEYS = {
@@ -41,6 +42,8 @@ _EXT_KEYS = {
     "deviceBoundAt": "device_bound_at",
     "merchantCategory": "merchant_category",
 }
+_DEVICE_EXT = {"deviceId", "ipAddress", "geoLat", "geoLon", "channel", "deviceBoundAt"}
+EVENT_TIME_EXT = "eventTime"  # original event time (ISO-8601) of a replayed transfer; see TRUST_FSP_EVENT_TIME
 _NUMERIC_EXT = {"lat", "lon"}
 _INT_EXT = {"device_bound_at"}
 _PARTY_TYPE = {"CONSUMER": "MSISDN", "MERCHANT": "BUSINESS", "BUSINESS": "BUSINESS"}
@@ -77,8 +80,13 @@ def _party(pid: str, alias: str, fsp: str, kind: str, mcc: str = "") -> dict:
     return party
 
 
-def to_fspiop(tx: dict) -> dict:
-    """Render an internal transaction dict as a Mojaloop transfer-prepare event message."""
+def fspiop_amount(amount: float) -> str:
+    """FSPIOP Amount string: at most 4 decimals and no trailing zeros ("500", "12.5"); switches reject "500.00"."""
+    return f"{round(float(amount), 4):.4f}".rstrip("0").rstrip(".")
+
+
+def fspiop_transaction(tx: dict) -> dict:
+    """The FSPIOP ``Transaction`` object (payer, payee, amount, type) that travels in the ILP packet's data."""
     scenario = tx["scenario"]
     ttype: dict[str, Any] = {
         "scenario": "REFUND" if scenario == "REVERSAL" else scenario,
@@ -89,8 +97,8 @@ def to_fspiop(tx: dict) -> dict:
         ttype["subScenario"] = "REVERSAL"
     if tx.get("original_transfer_id"):
         ttype["refundInfo"] = {"originalTransactionId": tx["original_transfer_id"]}
-    amount = {"amount": f"{float(tx['amount']):.2f}", "currency": tx.get("currency", "INR")}
-    transaction = {
+    amount = {"amount": fspiop_amount(tx["amount"]), "currency": tx.get("currency", "INR")}
+    return {
         "transactionId": tx["transfer_id"],
         "quoteId": tx.get("quote_id") or tx["transfer_id"],
         "payer": _party(tx["payer_id"], tx.get("payer_alias", ""), tx["payer_fsp"], tx.get("payer_type", "CONSUMER")),
@@ -104,11 +112,25 @@ def to_fspiop(tx: dict) -> dict:
         "amount": amount,
         "transactionType": ttype,
     }
+
+
+def fspiop_extensions(tx: dict, device_signals: bool = True) -> list[dict]:
+    """Risk signals FSPIOP does not carry natively, as ``extensionList`` entries (device ones optional)."""
     ext = []
     for k_out, k_in in _EXT_KEYS.items():
+        if not device_signals and k_out in _DEVICE_EXT:
+            continue
         v = tx.get(k_in)
-        if v is not None and v != "":
+        if v is not None and v != "" and v == v:  # v == v drops NaN
             ext.append({"key": k_out, "value": str(v)})
+    return ext
+
+
+def to_fspiop(tx: dict) -> dict:
+    """Render an internal transaction dict as a Mojaloop transfer-prepare event message."""
+    transaction = fspiop_transaction(tx)
+    amount = transaction["amount"]
+    ext = fspiop_extensions(tx)
     ts = int(tx["ts"])
     condition = base64.urlsafe_b64encode(hashlib.sha256(tx["transfer_id"].encode()).digest()).decode().rstrip("=")
     payload = {
@@ -279,6 +301,11 @@ def from_fspiop(msg: dict) -> dict:
                 out[k_in] = float(v) if k_in in _NUMERIC_EXT else int(float(v)) if k_in in _INT_EXT else str(v)
             except ValueError:
                 pass
+    if ext.get(EVENT_TIME_EXT) and get_settings().trust_fsp_event_time:
+        try:
+            out["ts"] = _parse_iso(str(ext[EVENT_TIME_EXT]))
+        except ValueError as e:
+            raise AdapterError(f"invalid {EVENT_TIME_EXT} extension: {e}") from e
     if not out["ts"]:
         raise AdapterError("event has no timestamp (metadata.event.createdAt or expiration)")
     return out
