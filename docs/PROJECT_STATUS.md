@@ -39,10 +39,13 @@ Server run of the same test: `docs/live_eval/mojaloop_complete.json`.
   * Docker stack and the 4-window setup share ports 5432/6379/8000: never run both at once
     (`docker stop fraud-pg fraud-redis` before `docker compose up`).
   * Recommended training size for Docker: default 1,000,000 (`DEMO_N_TX` unset); needs ~15 GB disk on D:.
-* **Deployment plan:** Docker test passed → merge the PR for `docker-fixes` → Docker + Mojaloop on the laptop
-  (`docker-compose.mojaloop.yml`, untested so far) → deploy on a VM
-  (Oracle Cloud Always Free ARM, or student credits) with only port 8080 open (close 5432/6379/8000 in the
-  cloud firewall), or a Cloudflare/ngrok tunnel from the laptop for a presentation.
+* **Docker + Mojaloop verified (2026-10-30):** engine in Docker with `docker-compose.mojaloop.yml`, sender from
+  the venv replaying the Docker dataset: 14,824/14,824 transfers scored, 49/60 frauds caught, p99 19.65 ms
+  (`docs/mojaloop_fraud_test.md`, "Running the engine in Docker instead").
+* **Deployment plan:** Docker and Docker + Mojaloop verified → next: public access. With Mojaloop, the
+  recommended option is the laptop plus a Cloudflare Tunnel to :8080 (free; the switch needs ~5 GB RAM and its
+  images are x86, so Oracle's free ARM VM likely cannot run it). A permanent alternative is an x86 VM with
+  ~16 GB RAM (student credits), with only port 8080 open (close 5432/6379/6380/8000 in the cloud firewall).
 
 ## The 4-window procedure (laptop, working)
 
