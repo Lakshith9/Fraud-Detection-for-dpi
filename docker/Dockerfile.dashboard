@@ -6,7 +6,8 @@ RUN npm ci --no-audit --no-fund
 COPY dashboard/ ./
 ARG VITE_API_KEY
 ENV VITE_API_KEY=$VITE_API_KEY
-RUN npx tsc -b && npx vite build
+# npm run build = tsc -b && vite build from the installed packages (npx would download unrelated ones if missing)
+RUN npm run build
 
 FROM nginx:1.27-alpine
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf

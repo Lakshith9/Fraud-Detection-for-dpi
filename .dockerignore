@@ -1,0 +1,17 @@
+# Keep the build context small and free of host-specific files (Windows node_modules, local venv, data, secrets)
+.git
+.venv
+.localdev
+.env
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+data/*
+!data/.gitkeep
+models/artifacts/*
+!models/artifacts/.gitkeep
+dashboard/node_modules
+dashboard/dist
+dashboard/tsconfig.tsbuildinfo
+docs/screenshots

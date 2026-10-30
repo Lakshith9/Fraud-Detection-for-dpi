@@ -78,10 +78,11 @@ cp .env.example .env        # then set OPERATOR_API_KEYS / VITE_API_KEY (generat
 docker compose --profile demo up -d --build
 ```
 
-> **Not verified on the build machine.** Docker was not installed on the Windows laptop used to build and
-> measure this project, so `docker compose up` was **not** run end to end. The Dockerfiles and compose file follow
-> the same commands that were run and verified natively (see "Run without Docker"). Treat the first Docker start
-> as untested.
+> **Verified** on Windows 11 with Docker Desktop (WSL 2, 16 GB RAM): all containers start, the dashboard works on
+> :8080 and the simulator's alerts appear. The first build plus 1M-transaction training took about an hour. It needs
+> about 15 GB of free disk where Docker keeps its disk image (Docker Desktop: Settings → Resources → Advanced → Disk
+> image location; move it off a nearly full system drive) and about 8–10 GB of memory for Docker during training.
+> The stack uses ports 5432, 6379, 8000 and 8080, so stop any local PostgreSQL/Redis/API first.
 
 The one-shot `init` service generates 1M transactions, replays features, trains and registers the models, and
 bootstraps Redis/Postgres; this takes about 15–25 minutes on a laptop. Then the API, two scoring workers, the
@@ -257,7 +258,7 @@ v2 without restart.
 | Redpanda/Kafka | **Redis Streams** (consumer groups, payer-hash partitions, pending-entry recovery, DLQ) | Redis was already required for the feature store; the build machine has 7.6 GB RAM and no Docker. The transport is isolated in `pipeline/worker.py` / `simulator/simulator.py` |
 | Live Mojaloop | Mojaloop-style **simulation** for all reported metrics; live connection via `pipeline/mojaloop_consumer.py` (Kafka `topic-transfer-prepare`, real ILP decoding), tested against `ml-core-test-harness` | No production switch or real labelled transfers available; see [docs/mojaloop_integration.md](docs/mojaloop_integration.md) |
 | Neo4j | NetworkX (default, fully working); optional Neo4j mirror behind `GRAPH_BACKEND=neo4j` | No Neo4j server available. **The Neo4j sink was not executed in any run** |
-| `docker compose up` verified from a fresh clone | Compose file + Dockerfiles written; system verified natively (PostgreSQL 16 + Redis 7 in WSL) | Docker is not installed on the build machine |
+| `docker compose up` verified from a fresh clone | Verified on Windows 11 / Docker Desktop: images build, `init` trains on 1M transactions, all services and the dashboard run | — (measured results were produced natively; see "Run without Docker") |
 | `make` targets | Makefile is a thin wrapper over `scripts/tasks.py` and the module commands that were actually run | `make` is not installed on the Windows build machine |
 | Isotonic/Platt calibration | Logistic stacking = Platt-style calibration | Keeps explanations exactly additive; isotonic would break additivity |
 
