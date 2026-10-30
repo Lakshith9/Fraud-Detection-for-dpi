@@ -58,8 +58,9 @@ Needs Docker and about 12 GB of free RAM for the switch.
    cd ml-core-test-harness && docker compose --profile all-services --profile ttk-provisioning up -d
    ```
    The harness binds host ports such as 6379 (its Redis), so give the engine's own Redis another port if both run
-   on one machine.
-2. Start the engine with the overlay (it joins the `mojaloop-net` network and reads `kafka:29092`):
+   on one machine (the Docker overlay below publishes it on 6380).
+2. Start the engine with the overlay (it joins the `mojaloop-net` network, reads `kafka:29092`, and runs without
+   the simulator; verified on Windows/Docker Desktop, see [mojaloop_fraud_test.md](mojaloop_fraud_test.md)):
    ```bash
    docker compose -f docker-compose.yml -f docker-compose.mojaloop.yml up -d --build
    ```

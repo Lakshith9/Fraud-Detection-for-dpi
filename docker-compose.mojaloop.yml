@@ -1,8 +1,11 @@
 # Live Mojaloop connection. Start the switch first (mojaloop/ml-core-test-harness creates the `mojaloop-net`
-# network and its Kafka on kafka:29092), then run the engine with this overlay:
+# network and its Kafka on kafka:29092), then run the engine with this overlay (no `--profile demo`: the
+# transfers come from the switch, not the simulator):
 #   docker compose -f docker-compose.yml -f docker-compose.mojaloop.yml up -d --build
 # The consumer reads topic-transfer-prepare with its own consumer group; see docs/mojaloop_integration.md.
 services:
+  redis:
+    ports: !override ["6380:6379"] # the harness's own Redis already holds host port 6379
   mojaloop-consumer:
     build: { context: ., dockerfile: docker/Dockerfile.app }
     image: dpi-fraud-engine:latest

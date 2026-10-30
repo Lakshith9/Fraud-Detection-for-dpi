@@ -159,3 +159,36 @@ Redis on a port other than 6379 (the harness uses 6379).
 
 To repeat a run, stop the engine, run `python scripts/tasks.py bootstrap` again (it resets state and ground
 truth), and start again from step 4.
+
+## Running the engine in Docker instead
+
+Verified on Windows 11 / Docker Desktop (2026-10-30). The engine runs from the Docker images (trained on the
+1M-transaction dataset inside Docker); the sender still runs from the venv.
+
+1. Start the switch as in steps 1–2 above. Stop anything else on ports 5432, 6380, 8000, 8080 (e.g.
+   `docker stop fraud-pg fraud-redis`, `docker compose --profile demo down`), and set `TRUST_FSP_EVENT_TIME=true`
+   in `.env` before starting the engine (the containers read `.env` when they are created).
+2. Start the engine with the Mojaloop overlay (no `--profile demo`, so no simulator):
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.mojaloop.yml up -d --build
+   ```
+   Wait for `bootstrap done` in `docker compose -f docker-compose.yml -f docker-compose.mojaloop.yml logs -f init`.
+   The overlay publishes the engine's Redis on 6380 (the harness holds 6379) and adds `mojaloop-consumer` on
+   `mojaloop-net`.
+3. The sender must replay the dataset the Docker engine was trained on, which lives in the `fraud-data` volume.
+   Copy it out once (Compose prefixes the volume with the project folder name, here `fraud-engine`):
+   ```bash
+   docker run --rm -v fraud-engine_fraud-data:/d -v D:\fraud-data-docker:/out alpine sh -c "cp /d/transactions.parquet /d/fraud_reports.parquet /out/"
+   ```
+4. Send one day (about 15,000 transfers of the 1M dataset) and score it; the dashboard is on :8080:
+   ```bash
+   python -m simulator.mojaloop_sender --data D:\fraud-data-docker --from-day 46 --to-day 47 --out docs/live_eval/docker_switch.json
+   python -m scripts.evaluate_live --label docker --out docs/live_eval/docker.json
+   ```
+5. Stop with the same files: `docker compose -f docker-compose.yml -f docker-compose.mojaloop.yml down`.
+
+Result on the laptop (day 46 of the 1M dataset): 14,824 / 14,824 transfers scored, 49 of 60 frauds caught (81.7 %)
+across all four typologies (merchant fraud rings 30/39, settlement manipulation 11/11, transaction laundering
+8/8, identity spoofing 0/2), 85 false alarms (0.6 %), block precision 77.2 %, scoring p50/p99 5.65/19.65 ms.
+This day is dominated by merchant fraud rings, the hardest typology, so it is not comparable with the days 46–51
+result on the 200k dataset; the 1M model's full held-out evaluation is in the README.
