@@ -9,6 +9,7 @@ models/artifacts/*
 !models/artifacts/.gitkeep
 dashboard/node_modules/
 dashboard/dist/
+dashboard/tsconfig.tsbuildinfo
 scratch_models/
 .pytest_cache/
 .ruff_cache/

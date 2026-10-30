@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.auth import operator
@@ -9,6 +11,17 @@ from api.schemas import CaseIn, CasePatch
 from core import db
 
 router = APIRouter(prefix="/v1/cases", tags=["cases"])
+
+
+_AUTO_TITLE = re.compile(r"Investigation of \d+ alert\(s\)")
+
+
+def refreshed_title(title: str, n_alerts: int) -> str | None:
+    """The dashboard's default title counts the alerts at creation; keep it current. Custom titles are left alone."""
+    if _AUTO_TITLE.fullmatch(title or ""):
+        new = f"Investigation of {n_alerts} alert(s)"
+        return new if new != title else None
+    return None
 
 
 def _audit(cur, case_id: int, actor: str, action: str, detail: dict):
@@ -104,4 +117,10 @@ def patch_case(case_id: int, body: CasePatch, op: str = Depends(operator)):
             cur.execute("UPDATE alerts SET case_id = %s WHERE transfer_id = %s", (case_id, t))
         if body.add_transfer_ids:
             _audit(cur, case_id, op, "alerts_added", {"transfer_ids": body.add_transfer_ids})
+            cur.execute("SELECT title FROM cases WHERE case_id = %s", (case_id,))
+            title = cur.fetchone()[0]
+            cur.execute("SELECT count(*) FROM case_alerts WHERE case_id = %s", (case_id,))
+            new_title = refreshed_title(title, cur.fetchone()[0])
+            if new_title:
+                cur.execute("UPDATE cases SET title = %s, updated_at = now() WHERE case_id = %s", (new_title, case_id))
     return get_case(case_id, op)
