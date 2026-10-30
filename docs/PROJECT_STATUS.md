@@ -1,6 +1,6 @@
 # Project status and handoff notes
 
-Last updated: 2026-10-29. Read this first when picking the project up again.
+Last updated: 2026-10-30. Read this first when picking the project up again.
 
 ## Requirement status (brief: AI-5, Bracket 2, Project 5)
 
@@ -28,7 +28,8 @@ Server run of the same test: `docs/live_eval/mojaloop_complete.json`.
   Verified on a Linux test machine: both images build and `docker compose --profile demo up` runs all 11
   containers (dashboard on :8080, API, WebSocket alerts, simulator) with no errors. Not yet verified there:
   the Debian `apt-get` step and the PyTorch CPU-index install / in-container training (blocked by that
-  machine's network). The full build + 1M training has not yet completed on the Windows laptop.
+  machine's network). **Verified on the Windows laptop (2026-10-30):** full build, 1M-transaction training in
+  `init`, all containers up, dashboard on :8080 working.
 * **Laptop facts (Windows 11, 16 GB RAM, Docker Desktop on WSL 2):**
   * Docker's disk image is on **`D:\DockerData`** (moved after the first build filled C: — do not move it back).
   * `%USERPROFILE%\.wslconfig` caps WSL memory (`memory=8GB`; raise to ~10GB for the Docker build/training,
@@ -38,7 +39,8 @@ Server run of the same test: `docs/live_eval/mojaloop_complete.json`.
   * Docker stack and the 4-window setup share ports 5432/6379/8000: never run both at once
     (`docker stop fraud-pg fraud-redis` before `docker compose up`).
   * Recommended training size for Docker: default 1,000,000 (`DEMO_N_TX` unset); needs ~15 GB disk on D:.
-* **Deployment plan:** finish the Docker test on the laptop → open the PR for `docker-fixes` → deploy on a VM
+* **Deployment plan:** Docker test passed → merge the PR for `docker-fixes` → Docker + Mojaloop on the laptop
+  (`docker-compose.mojaloop.yml`, untested so far) → deploy on a VM
   (Oracle Cloud Always Free ARM, or student credits) with only port 8080 open (close 5432/6379/8000 in the
   cloud firewall), or a Cloudflare/ngrok tunnel from the laptop for a presentation.
 
