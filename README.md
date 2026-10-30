@@ -248,7 +248,7 @@ v2 without restart.
 | 3 | Explainable alerts (SHAP per scored transaction) | REVIEW/BLOCK explanations computed synchronously; ALLOW explanations asynchronously (persister) or on demand. `test_explanation_is_exactly_additive_in_logit_space`; the integration test checks 5 plain-language reasons; screenshot `docs/screenshots/investigation_shap.jpg` |
 | 4 | Improves through operator feedback | `scripts/feedback_demo.py` → `docs/feedback_demo.json` (v1 → v2 promoted, holdout PR-AUC 0.8162 → 0.8652); the integration test exercises feedback → retrain → promote → hot reload |
 | — | Train/serve parity | `tests/unit/test_feature_parity.py` (identical features from the offline replay and the Redis serving path) |
-| — | Tests / lint / build | `docs/test_results.txt` (39 passed: 38 unit + 1 end-to-end integration); `ruff check .` clean; `npm run build` (tsc + vite) clean |
+| — | Tests / lint / build | `docs/test_results.txt` (75 passed: 74 unit + 1 end-to-end integration); `ruff check .` clean; `npm run build` (tsc + vite) clean |
 | — | Dashboard | Live alerts via WebSocket (`docs/screenshots/live_alerts.jpg`), investigation with SHAP chart + history timeline, ring graph (react-force-graph), cases with audit trail, feedback & model registry, system health (throughput, p50/p95/p99, alert rate, PSI drift, degraded mode, persister/graph status) |
 
 ## Deviations from the brief (and why)
@@ -256,7 +256,7 @@ v2 without restart.
 | Brief | What was built | Reason |
 |---|---|---|
 | Redpanda/Kafka | **Redis Streams** (consumer groups, payer-hash partitions, pending-entry recovery, DLQ) | Redis was already required for the feature store; the build machine has 7.6 GB RAM and no Docker. The transport is isolated in `pipeline/worker.py` / `simulator/simulator.py` |
-| Live Mojaloop | Mojaloop-style **simulation** for all reported metrics; live connection via `pipeline/mojaloop_consumer.py` (Kafka `topic-transfer-prepare`, real ILP decoding), tested against `ml-core-test-harness` | No production switch or real labelled transfers available; see [docs/mojaloop_integration.md](docs/mojaloop_integration.md) |
+| Live Mojaloop | Live connection via `pipeline/mojaloop_consumer.py` (Kafka `topic-transfer-prepare`, real ILP decoding) and a labelled fraud replay through Mojaloop's `ml-core-test-harness`: 15,182 transfers, all committed, 53 of 57 frauds caught, both natively and in Docker ([docs/mojaloop_fraud_test.md](docs/mojaloop_fraud_test.md)). The headline model metrics above come from the offline synthetic evaluation | No production switch or real labelled transfers available |
 | Neo4j | NetworkX (default, fully working); optional Neo4j mirror behind `GRAPH_BACKEND=neo4j` | No Neo4j server available. **The Neo4j sink was not executed in any run** |
 | `docker compose up` verified from a fresh clone | Verified on Windows 11 / Docker Desktop: images build, `init` trains on 1M transactions, all services and the dashboard run | — (measured results were produced natively; see "Run without Docker") |
 | `make` targets | Makefile is a thin wrapper over `scripts/tasks.py` and the module commands that were actually run | `make` is not installed on the Windows build machine |

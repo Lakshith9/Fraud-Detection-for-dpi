@@ -119,9 +119,11 @@ End-to-end results are in `docs/results.md` / `docs/benchmarks.json`.
 
 Redis is already required for the online feature store and the graph-score cache. Redis Streams provide consumer
 groups, acknowledgements, pending-entry recovery and per-partition ordering, which is everything this pipeline
-needs at 200–1000+ TPS. The development machine has 7.6 GB RAM and no Docker; a Kafka/Redpanda broker would add a
-second stateful system for no functional gain at this scale. Moving to Kafka only touches `pipeline/worker.py`
-(consumer) and `simulator/simulator.py` (producer); the adapter, scorer and features are transport-agnostic.
+needs at 200–1000+ TPS. The original development machine had 7.6 GB RAM and no Docker, and a Kafka/Redpanda broker
+would add a second stateful system for no functional gain at this scale. Moving to Kafka only touches
+`pipeline/worker.py` (consumer) and `simulator/simulator.py` (producer); the adapter, scorer and features are
+transport-agnostic. Kafka is used at the edge: `pipeline/mojaloop_consumer.py` reads a live Mojaloop switch's
+`topic-transfer-prepare` and forwards each transfer onto these streams.
 
 ## Train/serve parity
 
