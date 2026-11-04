@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, Alert, wsUrl } from "./api";
+import { api, Alert, AUTH_REQUIRED, getApiKey, wsUrl } from "./api";
 
 export interface AsyncState<T> {
   data: T | null;
@@ -65,6 +65,7 @@ export function useAlertStream(onAlert?: (a: Alert) => void, max = 500) {
       setStatus("connecting");
       ws = new WebSocket(wsUrl("/ws/alerts"));
       ws.onopen = () => {
+        ws?.send(JSON.stringify({ type: "auth", api_key: getApiKey() }));
         retry = 0;
         setStatus("open");
         ping = window.setInterval(() => ws?.readyState === WebSocket.OPEN && ws.send("ping"), 20000);
@@ -78,9 +79,13 @@ export function useAlertStream(onAlert?: (a: Alert) => void, max = 500) {
           cb.current?.(a);
         } else if (msg.type === "ring") setRingEvents((n) => n + 1);
       };
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
         window.clearInterval(ping);
         setStatus("closed");
+        if (ev.code === 4401) {
+          window.dispatchEvent(new Event(AUTH_REQUIRED)); // key rejected: retrying would only repeat it
+          return;
+        }
         if (!stopped) timer = window.setTimeout(connect, Math.min(10000, 500 * 2 ** retry++));
       };
       ws.onerror = () => ws?.close();

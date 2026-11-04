@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import threading
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.auth import operator
 from api.schemas import FeedbackIn, RetrainIn
@@ -61,7 +62,7 @@ def feedback(body: FeedbackIn, op: str = Depends(operator)):
 
 
 @router.get("/feedback", summary="Recent feedback and counts")
-def list_feedback(limit: int = 100, _op: str = Depends(operator)):
+def list_feedback(limit: int = Query(100, ge=1, le=1000), _op: str = Depends(operator)):
     return {
         "counts": {r["kind"]: r["n"] for r in db.fetch_all("SELECT kind, count(*) AS n FROM feedback GROUP BY kind")},
         "items": db.fetch_all("SELECT * FROM feedback ORDER BY created_at DESC LIMIT %s", (limit,)),
@@ -78,22 +79,32 @@ def models(_op: str = Depends(operator)):
     }
 
 
+_retrain_lock = threading.Lock()
+_retrain_proc: subprocess.Popen | None = None
+
+
 @router.post("/models/retrain", status_code=202, summary="Trigger feedback retraining (runs in a separate process)")
 def retrain(body: RetrainIn | None = None, op: str = Depends(operator)):
-    running = db.fetch_one(
-        "SELECT id FROM retrain_runs WHERE status = 'running' AND started_at > now() - interval '2 hours'"
-    )
-    if running:
-        raise HTTPException(409, f"retrain run {running['id']} already in progress")
-    log_dir = ROOT / "data" / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    out = open(log_dir / "retrain.log", "ab")
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "models.retrain", "--trigger", f"api:{op}"],
-        cwd=str(ROOT),
-        stdout=out,
-        stderr=subprocess.STDOUT,
-    )
+    global _retrain_proc
+    # The run only appears in retrain_runs once the child has started, so repeated calls in that window
+    # would each start a full training process; the lock and the child handle close that gap.
+    with _retrain_lock:
+        if _retrain_proc is not None and _retrain_proc.poll() is None:
+            raise HTTPException(409, f"retrain process {_retrain_proc.pid} already in progress")
+        running = db.fetch_one(
+            "SELECT id FROM retrain_runs WHERE status = 'running' AND started_at > now() - interval '2 hours'"
+        )
+        if running:
+            raise HTTPException(409, f"retrain run {running['id']} already in progress")
+        log_dir = ROOT / "data" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with open(log_dir / "retrain.log", "ab") as out:
+            proc = _retrain_proc = subprocess.Popen(
+                [sys.executable, "-m", "models.retrain", "--trigger", f"api:{op}"],
+                cwd=str(ROOT),
+                stdout=out,
+                stderr=subprocess.STDOUT,
+            )
     return {"status": "started", "pid": proc.pid, "trigger": f"api:{op}", "reason": body.reason if body else None}
 
 

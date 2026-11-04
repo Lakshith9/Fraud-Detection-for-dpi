@@ -216,7 +216,10 @@ def test_full_pipeline(system):
             )
         assert set(kinds) <= {"true_positive", "false_positive", "false_negative"}
 
-        with client.websocket_connect(f"/ws/alerts?api_key={API_KEY}") as ws:
+        with client.websocket_connect("/ws/alerts", headers={"X-API-Key": API_KEY}) as ws:
+            assert ws.receive_json()["type"] == "snapshot"
+        with client.websocket_connect("/ws/alerts") as ws:  # browser path: key in the first message
+            ws.send_json({"type": "auth", "api_key": API_KEY})
             assert ws.receive_json()["type"] == "snapshot"
 
         m = client.get("/v1/metrics", headers=h).json()

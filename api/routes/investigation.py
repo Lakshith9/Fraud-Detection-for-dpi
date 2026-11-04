@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from api.auth import operator
 from api.state import STATE
 from core import db
+from models import registry
 from models.ensemble import ModelBundle
 from models.explain import explain_row
 
@@ -101,9 +102,10 @@ def _bundle_for(version: str) -> ModelBundle:
         return cur
     cache = STATE.cache.setdefault("bundles", {})
     if version not in cache:
-        from core.config import get_settings
-
-        path = get_settings().artifacts_dir / version
+        try:
+            path = registry.artifact_path(version)
+        except ValueError:
+            return cur
         if not (path / "bundle.json").exists():
             return cur
         cache[version] = ModelBundle(path, load_sequence=False)

@@ -74,7 +74,7 @@ fraud-engine/
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env        # then set OPERATOR_API_KEYS / VITE_API_KEY (generate keys as described in the file)
+cp .env.example .env        # then set OPERATOR_API_KEYS (generate keys as described in the file)
 docker compose --profile demo up -d --build
 ```
 
@@ -82,14 +82,15 @@ docker compose --profile demo up -d --build
 > :8080 and the simulator's alerts appear. The first build plus 1M-transaction training took about an hour. It needs
 > about 15 GB of free disk where Docker keeps its disk image (Docker Desktop: Settings → Resources → Advanced → Disk
 > image location; move it off a nearly full system drive) and about 8–10 GB of memory for Docker during training.
-> The stack uses ports 5432, 6379, 8000 and 8080, so stop any local PostgreSQL/Redis/API first.
+> The stack uses ports 5432, 6379, 8000 and 8080, so stop any local PostgreSQL/Redis/API first. Only 8080 (the
+> dashboard) listens on all interfaces; Redis, PostgreSQL and the API are published on 127.0.0.1 only.
 
 The one-shot `init` service generates 1M transactions, replays features, trains and registers the models, and
 bootstraps Redis/Postgres; this takes about 15–25 minutes on a laptop. Then the API, two scoring workers, the
 graph worker, the retrain scheduler, the dashboard and the simulator (200 TPS, looping) start. Set `DEMO_N_TX=200000`
 in `.env` for a faster first start.
 
-* Dashboard: <http://localhost:8080> — live alerts, investigation, ring graph, cases, feedback, health
+* Dashboard: <http://localhost:8080> — live alerts, investigation, ring graph, cases, feedback, health (sign in with one of the `OPERATOR_API_KEYS` keys)
 * API docs (OpenAPI): <http://localhost:8000/docs>
 
 `make demo` runs the same command. `make down` stops everything.
@@ -173,7 +174,7 @@ All endpoints except `/healthz` and `/metrics` require `X-API-Key: <operator key
 | `REDIS_URL` | `redis://localhost:6379/0` | Online feature store, graph cache, streams, pub/sub |
 | `DATABASE_URL` | `postgresql://fraud:fraud@localhost:5432/fraud` | Transactions, alerts, rings, cases, feedback, registry |
 | `OPERATOR_API_KEYS` | *(none)* | `operator:key,operator2:key2` — no default secrets |
-| `VITE_API_KEY` | *(none)* | Key used by the dashboard build |
+| `VITE_API_KEY` | *(none)* | Dev server only: skips the dashboard sign-in. Production builds never contain a key; each operator signs in with their own |
 | `STREAM_PARTITIONS` | 2 | Stream partitions = scoring worker processes |
 | `SEQUENCE_TIMEOUT_MS` | 25 | Sequence-model deadline before falling back |
 | `GRAPH_INTERVAL_S` / `GRAPH_WINDOW_HOURS` / `GRAPH_STALE_AFTER_S` | 20 / 24 / 300 | Graph worker cadence, window, staleness for degraded mode |
@@ -248,7 +249,7 @@ v2 without restart.
 | 3 | Explainable alerts (SHAP per scored transaction) | REVIEW/BLOCK explanations computed synchronously; ALLOW explanations asynchronously (persister) or on demand. `test_explanation_is_exactly_additive_in_logit_space`; the integration test checks 5 plain-language reasons; screenshot `docs/screenshots/investigation_shap.jpg` |
 | 4 | Improves through operator feedback | `scripts/feedback_demo.py` → `docs/feedback_demo.json` (v1 → v2 promoted, holdout PR-AUC 0.8162 → 0.8652); the integration test exercises feedback → retrain → promote → hot reload |
 | — | Train/serve parity | `tests/unit/test_feature_parity.py` (identical features from the offline replay and the Redis serving path) |
-| — | Tests / lint / build | `docs/test_results.txt` (75 passed: 74 unit + 1 end-to-end integration); `ruff check .` clean; `npm run build` (tsc + vite) clean |
+| — | Tests / lint / build | `docs/test_results.txt` (79 passed: 78 unit + 1 end-to-end integration); `ruff check .` clean; `npm run build` (tsc + vite) clean |
 | — | Dashboard | Live alerts via WebSocket (`docs/screenshots/live_alerts.jpg`), investigation with SHAP chart + history timeline, ring graph (react-force-graph), cases with audit trail, feedback & model registry, system health (throughput, p50/p95/p99, alert rate, PSI drift, degraded mode, persister/graph status) |
 
 ## Deviations from the brief (and why)

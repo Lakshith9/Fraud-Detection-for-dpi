@@ -36,6 +36,7 @@ from core.logging import get_logger, setup_logging  # noqa: E402
 from core.redis_client import get_redis  # noqa: E402
 from models.ensemble import ModelBundle  # noqa: E402
 from models.explain import explain_rows  # noqa: E402
+from models.registry import artifact_path  # noqa: E402
 from pipeline.scorer import PERSIST_STREAM  # noqa: E402
 from pipeline.worker import ensure_group  # noqa: E402
 from pipeline.writer import DBWriter  # noqa: E402
@@ -51,7 +52,10 @@ class BundleCache:
 
     def get(self, version: str) -> ModelBundle | None:
         if version not in self.cache:
-            path = self.s.artifacts_dir / version
+            try:
+                path = artifact_path(version)
+            except ValueError:
+                return None
             if not (path / "bundle.json").exists():
                 return None
             self.cache[version] = ModelBundle(path, load_sequence=False)

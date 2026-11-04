@@ -4,8 +4,7 @@ WORKDIR /ui
 COPY dashboard/package.json dashboard/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY dashboard/ ./
-ARG VITE_API_KEY
-ENV VITE_API_KEY=$VITE_API_KEY
+# No API key is built in: operators sign in on the dashboard with their own key
 # npm run build = tsc -b && vite build from the installed packages (npx would download unrelated ones if missing)
 RUN npm run build
 

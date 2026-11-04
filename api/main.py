@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from api import metrics as metrics_mod
-from api.auth import operator, ws_operator
+from api.auth import message_operator, operator, ws_operator
 from api.hub import Hub
 from api.routes import cases, feedback, investigation, scoring
 from api.state import STATE
@@ -77,14 +77,16 @@ def healthz():
     try:
         STATE.redis.ping()
         out["checks"]["redis"] = {"ok": True, "ms": round((time.perf_counter() - t) * 1000, 2)}
-    except Exception as e:
-        out["checks"]["redis"] = {"ok": False, "error": str(e)[:200]}
+    except Exception as e:  # /healthz is unauthenticated: report the error type, log the detail
+        log.error("health check: redis", error=str(e)[:200])
+        out["checks"]["redis"] = {"ok": False, "error": type(e).__name__}
     t = time.perf_counter()
     try:
         db.fetch_one("SELECT 1 AS ok")
         out["checks"]["postgres"] = {"ok": True, "ms": round((time.perf_counter() - t) * 1000, 2)}
     except Exception as e:
-        out["checks"]["postgres"] = {"ok": False, "error": str(e)[:200]}
+        log.error("health check: postgres", error=str(e)[:200])
+        out["checks"]["postgres"] = {"ok": False, "error": type(e).__name__}
     b = STATE.scorer.models.bundle if STATE.scorer else None
     out["checks"]["model"] = {
         "ok": b is not None,
@@ -117,13 +119,21 @@ def prometheus():
     return "\n".join(lines) + "\n"
 
 
+WS_AUTH_TIMEOUT_S = 5.0
+
+
 @app.websocket("/ws/alerts")
 async def ws_alerts(ws: WebSocket):
+    await ws.accept()
     op = ws_operator(ws)
+    if op is None:  # browsers send {"type": "auth", "api_key": ...} as the first message
+        try:
+            op = message_operator(await asyncio.wait_for(ws.receive_text(), timeout=WS_AUTH_TIMEOUT_S))
+        except (TimeoutError, WebSocketDisconnect, KeyError, RuntimeError):  # KeyError: a binary frame
+            op = None
     if op is None:
         await ws.close(code=4401)
         return
-    await ws.accept()
     recent = await asyncio.to_thread(db.fetch_all, "SELECT * FROM alerts ORDER BY alert_id DESC LIMIT 50")
     await ws.send_text(orjson.dumps({"type": "snapshot", "data": recent}, default=str).decode())
     await STATE.hub.register(ws)

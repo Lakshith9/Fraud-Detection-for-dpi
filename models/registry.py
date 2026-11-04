@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from core import db
@@ -22,6 +23,7 @@ from core.config import get_settings
 
 CURRENT_KEY = "model:current"
 UPDATES_CHANNEL = "model:updates"
+_VERSION = re.compile(r"v\d{1,9}")
 
 
 def _redis():
@@ -31,6 +33,10 @@ def _redis():
 
 
 def artifact_path(version: str) -> Path:
+    """Artifact directory of a version. Versions come from Redis, Postgres and the API, so only ``v<n>`` is
+    accepted: anything else (``../x``, an absolute path) would point the loaders outside ``artifacts_dir``."""
+    if not isinstance(version, str) or not _VERSION.fullmatch(version):
+        raise ValueError(f"invalid model version {version!r}")
     return get_settings().artifacts_dir / version
 
 
@@ -57,6 +63,7 @@ def current() -> str | None:
 
 
 def promote(version: str, publish: bool = True) -> None:
+    artifact_path(version)  # rejects malformed versions before they reach Postgres or Redis
     row = db.fetch_one("SELECT version FROM model_registry WHERE version = %s", (version,))
     if row is None:
         raise ValueError(f"unknown model version {version}")

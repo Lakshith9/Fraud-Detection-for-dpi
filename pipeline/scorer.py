@@ -31,7 +31,7 @@ from core.config import get_settings
 from core.logging import get_logger
 from models.ensemble import ModelBundle
 from models.explain import explain
-from models.registry import CURRENT_KEY
+from models.registry import CURRENT_KEY, artifact_path
 from pipeline.features import GRAPH_FEATURES, TABULAR_FEATURES, FeatureEngine
 from pipeline.state_store import InMemoryStore, RedisStore
 
@@ -82,7 +82,7 @@ class ModelManager:
         return v
 
     def load(self, version: str) -> None:
-        path = self.s.artifacts_dir / version
+        path = artifact_path(version)
         t = time.perf_counter()
         b = ModelBundle(Path(path))
         self.bundle = b  # atomic reference swap

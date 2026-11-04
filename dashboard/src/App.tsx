@@ -1,14 +1,15 @@
 import clsx from "clsx";
-import { Activity, Bell, Briefcase, MessageSquareWarning, Network, Search, ShieldCheck } from "lucide-react";
-import { useRef, useState } from "react";
+import { Activity, Bell, Briefcase, LogOut, MessageSquareWarning, Network, Search, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import type { Alert } from "./lib/api";
+import { AUTH_REQUIRED, getApiKey, setApiKey, type Alert } from "./lib/api";
 import { beep, useAlertStream, useApi } from "./lib/hooks";
 import Cases from "./views/Cases";
 import Feedback from "./views/Feedback";
 import Investigation from "./views/Investigation";
 import LiveAlerts from "./views/LiveAlerts";
 import Rings from "./views/Rings";
+import SignIn from "./views/SignIn";
 import SystemHealth from "./views/SystemHealth";
 
 const NAV = [
@@ -26,6 +27,44 @@ interface Health {
 }
 
 export default function App() {
+  const [key, setKey] = useState(getApiKey);
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    const onAuthRequired = () => {
+      setApiKey(null);
+      setKey("");
+      setExpired(true);
+    };
+    window.addEventListener(AUTH_REQUIRED, onAuthRequired);
+    return () => window.removeEventListener(AUTH_REQUIRED, onAuthRequired);
+  }, []);
+
+  if (!key) {
+    return (
+      <SignIn
+        expired={expired}
+        onSignIn={(k) => {
+          setApiKey(k);
+          setExpired(false);
+          setKey(k);
+        }}
+      />
+    );
+  }
+  // keyed on the operator's key so a new sign-in starts a fresh alert stream
+  return (
+    <Console
+      key={key}
+      onSignOut={() => {
+        setApiKey(null);
+        setKey("");
+      }}
+    />
+  );
+}
+
+function Console({ onSignOut }: { onSignOut: () => void }) {
   const [sound, setSound] = useState(false);
   const soundRef = useRef(sound);
   soundRef.current = sound;
@@ -80,6 +119,9 @@ export default function App() {
             <span className="font-mono text-slate-300">{health.data?.checks?.model?.version ?? "—"}</span>
           </div>
           <div className="pt-1 text-[10px] leading-snug text-slate-600">Mojaloop FSPIOP transfers — from the simulator or a live switch.</div>
+          <button className="btn-ghost mt-1 w-full justify-center !py-1 text-xs" onClick={onSignOut}>
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
         </div>
       </aside>
       <main className="min-w-0 flex-1">
@@ -89,6 +131,9 @@ export default function App() {
               {label}
             </NavLink>
           ))}
+          <button className="ml-auto whitespace-nowrap rounded px-2 py-1 text-xs text-slate-400" onClick={onSignOut}>
+            Sign out
+          </button>
         </div>
         <Routes>
           <Route path="/" element={<Navigate to="/alerts" replace />} />

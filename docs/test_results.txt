@@ -62,6 +62,10 @@ PASSED tests/unit/test_mojaloop_sender.py::test_fspiop_amount_format[1234.56789-
 PASSED tests/unit/test_mojaloop_sender.py::test_fspiop_amount_format[500.0-500]
 PASSED tests/unit/test_mojaloop_sender.py::test_ilp_prepare_encoder_round_trip
 PASSED tests/unit/test_mojaloop_sender.py::test_mock_fsp_fulfils_with_matching_fulfilment
+PASSED tests/unit/test_security.py::test_header_key_maps_to_its_operator
+PASSED tests/unit/test_security.py::test_model_versions_cannot_leave_the_artifacts_dir
+PASSED tests/unit/test_security.py::test_request_sizes_are_bounded
+PASSED tests/unit/test_security.py::test_websocket_auth_message
 PASSED tests/unit/test_state_store.py::test_execute_plan_and_dump
 PASSED tests/unit/test_state_store.py::test_lists_push_trim_range
 PASSED tests/unit/test_state_store.py::test_sets_and_hashes

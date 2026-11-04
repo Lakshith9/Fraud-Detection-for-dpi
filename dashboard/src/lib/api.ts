@@ -170,7 +170,37 @@ export interface ModelsInfo {
 }
 
 const BASE: string = import.meta.env.VITE_API_URL ?? "";
-export const API_KEY: string = import.meta.env.VITE_API_KEY ?? "";
+
+// Each operator signs in with their own key; it is kept for the browser session only and never compiled into the
+// bundle (anyone who can load the page could read it). VITE_API_KEY is honoured by the dev server only.
+const KEY_STORAGE = "fraud-ops.api-key";
+const DEV_KEY: string = import.meta.env.DEV ? (import.meta.env.VITE_API_KEY ?? "") : "";
+export const AUTH_REQUIRED = "fraud-ops:auth-required";
+
+export function getApiKey(): string {
+  try {
+    return sessionStorage.getItem(KEY_STORAGE) ?? DEV_KEY;
+  } catch {
+    return DEV_KEY;
+  }
+}
+
+export function setApiKey(key: string | null): void {
+  try {
+    if (key) sessionStorage.setItem(KEY_STORAGE, key);
+    else sessionStorage.removeItem(KEY_STORAGE);
+  } catch {
+    /* storage unavailable: the key lasts until reload */
+  }
+}
+
+/** Check a key against an authenticated endpoint without storing it. */
+export async function verifyApiKey(key: string): Promise<boolean> {
+  const res = await fetch(BASE + "/v1/metrics", { headers: { "X-API-Key": key } });
+  if (res.status === 401) return false;
+  if (!res.ok) throw new ApiError(res.status, `${res.status} ${res.statusText}`);
+  return true;
+}
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -181,8 +211,9 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(BASE + path, {
     ...init,
-    headers: { "Content-Type": "application/json", "X-API-Key": API_KEY, ...(init.headers ?? {}) },
+    headers: { "Content-Type": "application/json", "X-API-Key": getApiKey(), ...(init.headers ?? {}) },
   });
+  if (res.status === 401) window.dispatchEvent(new Event(AUTH_REQUIRED));
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try {
@@ -199,8 +230,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const post = <T,>(path: string, body: unknown) => api<T>(path, { method: "POST", body: JSON.stringify(body) });
 export const patch = <T,>(path: string, body: unknown) => api<T>(path, { method: "PATCH", body: JSON.stringify(body) });
 
+/** WebSocket URL without credentials: the key is sent as the first message (URLs end up in access logs). */
 export function wsUrl(path: string): string {
-  if (BASE) return BASE.replace(/^http/, "ws") + `${path}?api_key=${encodeURIComponent(API_KEY)}`;
+  if (BASE) return BASE.replace(/^http/, "ws") + path;
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${window.location.host}${path}?api_key=${encodeURIComponent(API_KEY)}`;
+  return `${proto}://${window.location.host}${path}`;
 }
