@@ -79,7 +79,7 @@ export default function App() {
             <span>Model</span>
             <span className="font-mono text-slate-300">{health.data?.checks?.model?.version ?? "—"}</span>
           </div>
-          <div className="pt-1 text-[10px] leading-snug text-slate-600">Simulated Mojaloop-compatible events — not a live Mojaloop switch.</div>
+          <div className="pt-1 text-[10px] leading-snug text-slate-600">Mojaloop FSPIOP transfers — from the simulator or a live switch.</div>
         </div>
       </aside>
       <main className="min-w-0 flex-1">

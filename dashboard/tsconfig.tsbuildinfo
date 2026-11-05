@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/components/feedbackbuttons.tsx","./src/components/ui.tsx","./src/lib/api.ts","./src/lib/format.ts","./src/lib/hooks.ts","./src/views/cases.tsx","./src/views/feedback.tsx","./src/views/investigation.tsx","./src/views/livealerts.tsx","./src/views/rings.tsx","./src/views/systemhealth.tsx"],"version":"5.6.3"}
