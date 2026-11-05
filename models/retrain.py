@@ -111,7 +111,7 @@ def run_retrain(trigger: str = "manual", features_dir: Path | None = None, data_
             y = np.array([fb_label.get(t, 0) for t in live["transfer_id"]], dtype=int)
             extra = {"tab": tab, "graph": gra, "y": y, "weight": 1.0}
         # feedback on rows inside the original offline training data overrides their labels
-        override = pd.Series({t: v for t, v in fb_label.items()})
+        override = pd.Series(fb_label)
         version = registry.next_version()
         parent_bundle = json.loads((base_dir / "bundle.json").read_text())
         best = parent_bundle["xgb"]["params"]

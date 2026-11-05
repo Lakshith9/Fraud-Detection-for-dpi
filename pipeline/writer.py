@@ -54,7 +54,6 @@ class DBWriter:
         self._stop = threading.Event()
         self.healthy = True
         self.written = 0
-        self.spooled = 0
         self.t = threading.Thread(target=self._run, name="db-writer", daemon=True)
         self.t.start()
 
@@ -87,14 +86,13 @@ class DBWriter:
         tx = [DBWriter._adapt(k, r) for k, r in items if k == "tx"]
         al = [DBWriter._adapt(k, r) for k, r in items if k == "alert"]
         ex = [DBWriter._adapt(k, r) for k, r in items if k == "expl"]
-        with db.get_pool().connection() as conn:
-            with conn.transaction(), conn.cursor() as cur:
-                if tx:
-                    cur.executemany(TX_SQL, tx)
-                if al:
-                    cur.executemany(ALERT_SQL, al)
-                if ex:
-                    cur.executemany(EXPL_SQL, ex)
+        with db.get_pool().connection() as conn, conn.transaction(), conn.cursor() as cur:
+            if tx:
+                cur.executemany(TX_SQL, tx)
+            if al:
+                cur.executemany(ALERT_SQL, al)
+            if ex:
+                cur.executemany(EXPL_SQL, ex)
 
     def _write(self, items: list[tuple[str, dict]]) -> None:
         self.write_batch(items)
@@ -106,7 +104,6 @@ class DBWriter:
         with open(path, "wb") as f:
             for k, r in items:
                 f.write(orjson.dumps({"kind": k, "row": r}, option=orjson.OPT_SERIALIZE_NUMPY, default=str) + b"\n")
-        self.spooled += len(items)
         log.warning("database unavailable; spooled rows to disk", rows=len(items), path=str(path))
 
     def _replay_spool(self) -> None:

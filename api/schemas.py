@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -96,6 +96,3 @@ class CasePatch(BaseModel):
 
 class RetrainIn(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
-
-
-Json = dict[str, Any]

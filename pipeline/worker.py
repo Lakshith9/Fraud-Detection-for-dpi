@@ -10,6 +10,7 @@ Usage: python -m pipeline.worker --partition 0
 from __future__ import annotations
 
 import argparse
+import contextlib
 import signal
 import socket
 import threading
@@ -99,7 +100,7 @@ def run(partition: int, batch: int = 200, stop_event: threading.Event | None = N
                 log.error("xack failed (entries will be redelivered, idempotent)", error=str(e)[:200])
         now = time.time()
         if now - last_beat > 2:
-            try:
+            with contextlib.suppress(redis.RedisError):
                 r.hset(
                     f"worker:{partition}",
                     mapping={
@@ -111,8 +112,6 @@ def run(partition: int, batch: int = 200, stop_event: threading.Event | None = N
                         "db_healthy": int(writer.healthy),
                     },
                 )
-            except redis.RedisError:
-                pass
             last_beat = now
     log.info("worker stopping; flushing writer", processed=processed)
     writer.stop()

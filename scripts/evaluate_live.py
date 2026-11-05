@@ -73,7 +73,7 @@ def evaluate(label: str, timeout: float = 600) -> dict:
             "caught": int(review_or_block[m].sum()),
             "recall": round(float(review_or_block[m].mean()), 4),
         }
-    out = {
+    return {
         "label": label,
         "transfers_expected": expected,
         "transfers_scored": stored,
@@ -94,7 +94,6 @@ def evaluate(label: str, timeout: float = 600) -> dict:
         else None,
         "degraded_combos": {str(c): n for c, n in _counts([r["combo"] for r in rows]).items() if c != "full"},
     }
-    return out
 
 
 def _counts(xs) -> dict:

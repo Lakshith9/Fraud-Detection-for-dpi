@@ -14,6 +14,7 @@ CLI:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import re
 from pathlib import Path
@@ -69,12 +70,11 @@ def promote(version: str, publish: bool = True) -> None:
         raise ValueError(f"unknown model version {version}")
     if not (artifact_path(version) / "bundle.json").exists():
         raise FileNotFoundError(f"artifacts for {version} missing at {artifact_path(version)}")
-    with db.get_pool().connection() as conn:
-        with conn.transaction():
-            conn.execute("UPDATE model_registry SET status = 'archived' WHERE status = 'production'")
-            conn.execute(
-                "UPDATE model_registry SET status = 'production', promoted_at = now() WHERE version = %s", (version,)
-            )
+    with db.get_pool().connection() as conn, conn.transaction():
+        conn.execute("UPDATE model_registry SET status = 'archived' WHERE status = 'production'")
+        conn.execute(
+            "UPDATE model_registry SET status = 'production', promoted_at = now() WHERE version = %s", (version,)
+        )
     if publish:
         try:
             r = _redis()
@@ -110,10 +110,8 @@ def list_versions() -> list[dict]:
 def sync_current_to_redis() -> str | None:
     v = current()
     if v:
-        try:
+        with contextlib.suppress(Exception):
             _redis().set(CURRENT_KEY, v)
-        except Exception:
-            pass
     return v
 
 

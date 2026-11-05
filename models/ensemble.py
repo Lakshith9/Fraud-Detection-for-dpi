@@ -151,12 +151,3 @@ class ModelBundle:
 
     def shap_tabular(self, tab_row: np.ndarray) -> np.ndarray:
         return np.asarray(self.explainer.shap_values(tab_row.reshape(1, -1).astype(np.float32)))[0]
-
-    # ------------------------------------------------------------------ batch (evaluation / retraining)
-    def batch_scores(self, tab: np.ndarray, seq: np.ndarray | None, graph: np.ndarray, combo: str = "full"):
-        import xgboost as xgb
-
-        m = self.booster.predict(xgb.DMatrix(tab, nthread=-1), output_margin=True)
-        s = self.seq.logits(seq) if (self.seq is not None and seq is not None) else np.zeros(len(tab))
-        x = meta_inputs(combo, m, s, graph)
-        return sigmoid(self.combos[combo].logit(x)), m, s

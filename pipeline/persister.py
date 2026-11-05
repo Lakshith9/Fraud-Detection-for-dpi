@@ -22,6 +22,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import argparse  # noqa: E402
 import collections  # noqa: E402
+import contextlib
 import signal  # noqa: E402
 import socket  # noqa: E402
 import threading  # noqa: E402
@@ -149,7 +150,7 @@ def run(
                     log.error("explanation update failed", error=str(e)[:200])
         now = time.time()
         if now - last_beat > 2:
-            try:
+            with contextlib.suppress(redis.RedisError):
                 r.hset(
                     "persister",
                     mapping={
@@ -160,8 +161,6 @@ def run(
                         "explain_queue": len(pending_expl),
                     },
                 )
-            except redis.RedisError:
-                pass
             last_beat = now
     log.info("persister stopped", written=written)
 

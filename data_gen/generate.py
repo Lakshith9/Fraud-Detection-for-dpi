@@ -36,9 +36,6 @@ from data_gen.entities import (
     Universe,
 )
 
-SCENARIOS = ("TRANSFER", "PAYMENT", "REFUND", "REVERSAL")
-TYPOLOGIES = ("identity_spoofing", "settlement_manipulation", "merchant_fraud_ring", "transaction_laundering")
-
 
 @dataclass
 class GenConfig:

@@ -18,8 +18,6 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import Any
 
-Plan = list[tuple]  # [(command, *args), ...]
-
 
 class InMemoryStore:
     """In-process implementation of the Redis subset used by the feature engine and graph worker."""
@@ -258,18 +256,3 @@ class RedisStore:
         for cmd, *args in plan:
             getattr(pipe, cmd)(*args)
         return pipe.execute()
-
-    def execute_many(self, plans: list[Plan]) -> list[list[Any]]:
-        """Run several plans in ONE round-trip, returning per-plan results."""
-        pipe = self.r.pipeline(transaction=False)
-        sizes = []
-        for plan in plans:
-            sizes.append(len(plan))
-            for cmd, *args in plan:
-                getattr(pipe, cmd)(*args)
-        flat = pipe.execute()
-        out, i = [], 0
-        for s in sizes:
-            out.append(flat[i : i + s])
-            i += s
-        return out

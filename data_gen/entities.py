@@ -190,10 +190,3 @@ class Universe:
             home_ip=np.array(c["home_ip"], dtype=np.int64),
             category=np.array(c["category"], dtype=np.int16),
         )
-
-    @property
-    def n_accounts(self) -> int:
-        return len(self._cols["ids"])
-
-    def col(self, name: str, idx):
-        return np.asarray(self._cols[name])[idx] if not isinstance(idx, (int, np.integer)) else self._cols[name][idx]

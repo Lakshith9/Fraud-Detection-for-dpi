@@ -22,6 +22,7 @@ live switch they are empty unless the FSPs populate them.
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 from datetime import UTC, datetime
 from email.utils import formatdate
@@ -297,10 +298,8 @@ def from_fspiop(msg: dict) -> dict:
     for k_ext, k_in in _EXT_KEYS.items():
         if k_ext in ext and ext[k_ext] not in (None, ""):
             v = ext[k_ext]
-            try:
+            with contextlib.suppress(ValueError):
                 out[k_in] = float(v) if k_in in _NUMERIC_EXT else int(float(v)) if k_in in _INT_EXT else str(v)
-            except ValueError:
-                pass
     if ext.get(EVENT_TIME_EXT) and get_settings().trust_fsp_event_time:
         try:
             out["ts"] = _parse_iso(str(ext[EVENT_TIME_EXT]))

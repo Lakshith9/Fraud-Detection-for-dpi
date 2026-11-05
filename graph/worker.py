@@ -12,6 +12,7 @@ Usage: python -m graph.worker [--once]
 from __future__ import annotations
 
 import argparse
+import contextlib
 import time
 
 import orjson
@@ -68,10 +69,8 @@ def persist_rings(rings, r) -> int:
                 ),
             )
     for x in keep:
-        try:
+        with contextlib.suppress(Exception):
             r.publish(RING_CHANNEL, orjson.dumps({k: v for k, v in x.to_dict().items() if k != "edges"}))
-        except Exception:
-            pass
     return len(keep)
 
 

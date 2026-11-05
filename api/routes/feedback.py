@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import subprocess
 import sys
 import threading
@@ -45,12 +46,10 @@ def feedback(body: FeedbackIn, op: str = Depends(operator)):
         )
     if body.label == "fraud":
         # confirmed fraud feeds the counterparty-risk registry used by the online features and graph worker
-        try:
+        with contextlib.suppress(Exception):
             STATE.scorer.store.execute(
                 FeatureEngine.report_plan(tx["payee_id"]) + [("sadd", "reported", tx["payee_id"])]
             )
-        except Exception:
-            pass
     return {
         "id": row["id"],
         "transfer_id": body.transfer_id,
