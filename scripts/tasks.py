@@ -88,7 +88,7 @@ def services(with_dashboard: bool) -> list[subprocess.Popen]:
 
     s = get_settings()
     logs = s.data_dir / "logs"
-    procs = [spawn("api", [PY, "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"], logs)]
+    procs = [spawn("api", [PY, "-m", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--port", "8000"], logs)]
     for p in range(s.stream_partitions):
         procs.append(spawn(f"worker-{p}", [PY, "-m", "pipeline.worker", "--partition", str(p)], logs))
     procs.append(spawn("graph-worker", [PY, "-m", "graph.worker"], logs))
